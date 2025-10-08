@@ -12,6 +12,7 @@ const (
 	StatusCompleted PaymentStatus = "COMPLETED"
 	StatusFailed    PaymentStatus = "FAILED"
 	StatusCanceled  PaymentStatus = "CANCELED"
+	StatusCaptured  PaymentStatus = "CAPTURED"
 )
 
 type Payment struct {
@@ -63,6 +64,11 @@ func (p *Payment) Cancel() {
 
 func (p *Payment) Fail() {
 	p.Status = StatusFailed
+	p.UpdatedAt = time.Now()
+}
+
+func (p *Payment) Capture() {
+	p.Status = StatusCaptured
 	p.UpdatedAt = time.Now()
 }
 

@@ -1,6 +1,7 @@
 package infra
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -13,7 +14,8 @@ import (
 )
 
 type StripeClient interface {
-	CreatePaymentIntent(amount int64, currency, email string) (*stripe.PaymentIntent, error)
+	CreatePaymentIntent(ctx context.Context, amount int64, currency, email string) (*stripe.PaymentIntent, error)
+	Capture(ctx context.Context, piID string) error
 }
 
 var configuration, _ = config.LoadConfiguration()
@@ -39,15 +41,19 @@ func newDefaultCircuitBreaker() *gobreaker.CircuitBreaker {
 }
 
 func NewStripeClient() StripeClient {
-	configuration, _ := config.LoadConfiguration()
 	stripe.Key = configuration.StripeApiKey
 	return &stripeClient{
 		cb: newDefaultCircuitBreaker(),
 	}
 }
 
-func (s *stripeClient) CreatePaymentIntent(amount int64, currency, email string) (*stripe.PaymentIntent, error) {
-	result, err := s.cb.Execute(func() (interface{}, error) {
+func (c *stripeClient) CreatePaymentIntent(ctx context.Context, amount int64, currency, email string) (*stripe.PaymentIntent, error) {
+	result, err := c.cb.Execute(func() (interface{}, error) {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
 		var lastErr error
 		backoff := 100 * time.Millisecond
 		maxRetries := 3
@@ -95,4 +101,26 @@ func (s *stripeClient) CreatePaymentIntent(amount int64, currency, email string)
 	}
 
 	return pi, nil
+}
+
+func (c *stripeClient) Capture(ctx context.Context, piID string) error {
+	result, err := c.cb.Execute(func() (interface{}, error) {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
+		return paymentintent.Capture(piID, &stripe.PaymentIntentCaptureParams{})
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if _, ok := result.(*stripe.PaymentIntent); !ok {
+		return errors.New("unexpected result type from Stripe capture")
+	}
+
+	return nil
 }

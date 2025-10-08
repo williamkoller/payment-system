@@ -1,6 +1,7 @@
 package application
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -45,7 +46,8 @@ func (u *PaymentUseCase) CreatePayment(input PaymentInput) (*domain.Payment, err
 		return nil, err
 	}
 
-	intent, err := u.StripeClient.CreatePaymentIntent(input.Amount, input.Currency, input.Email)
+	ctx := context.Background()
+	intent, err := u.StripeClient.CreatePaymentIntent(ctx, input.Amount, input.Currency, input.Email)
 	if err != nil {
 		payment.Fail()
 		_ = u.Repository.Update(payment)
@@ -68,4 +70,29 @@ func (u *PaymentUseCase) FindPaymentByID(id string) (*domain.Payment, error) {
 		return nil, errors.New("payment not found")
 	}
 	return paymentFound, nil
+}
+
+func (u *PaymentUseCase) Capture(ctx context.Context, paymentID string) (*domain.Payment, error) {
+	payment, err := u.Repository.FindByID(paymentID)
+	if err != nil {
+		return nil, fmt.Errorf("payment not found: %w", err)
+	}
+
+	if payment.StripeID == "" {
+		return nil, errors.New("missing Stripe payment intent ID")
+	}
+
+	err = u.StripeClient.Capture(ctx, payment.StripeID)
+	if err != nil {
+		payment.Fail()
+		_ = u.Repository.Update(payment)
+		return payment, fmt.Errorf("stripe capture failed: %w", err)
+	}
+
+	payment.Capture()
+	if err := u.Repository.Update(payment); err != nil {
+		return payment, err
+	}
+
+	return payment, nil
 }
