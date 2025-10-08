@@ -13,6 +13,7 @@ const (
 	StatusFailed    PaymentStatus = "FAILED"
 	StatusCanceled  PaymentStatus = "CANCELED"
 	StatusCaptured  PaymentStatus = "CAPTURED"
+	StatusRefund    PaymentStatus = "REFUND"
 )
 
 type Payment struct {
@@ -70,6 +71,31 @@ func (p *Payment) Fail() {
 func (p *Payment) Capture() {
 	p.Status = StatusCaptured
 	p.UpdatedAt = time.Now()
+}
+
+func (p *Payment) Refund() {
+	p.Status = StatusRefund
+	p.UpdatedAt = time.Now()
+}
+
+func (p *Payment) CanCancel() error {
+	if p.Status == StatusCanceled {
+		return errors.New("cannot cancel: payment already captured")
+	}
+
+	if p.Status == StatusCanceled {
+		return errors.New("payment already canceled")
+	}
+
+	return nil
+}
+
+func (p *Payment) CanRefund() error {
+	if p.Status != StatusCaptured {
+		return errors.New("payment must be captured before refund is allowed")
+	}
+
+	return nil
 }
 
 func (p *Payment) GetID() string {

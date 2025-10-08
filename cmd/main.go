@@ -15,6 +15,7 @@ import (
 	healthRouter "github.com/williamkoller/payment-system/internal/healthz/router"
 	"github.com/williamkoller/payment-system/internal/middleware"
 	paymentRouter "github.com/williamkoller/payment-system/internal/payment/router"
+	webhookRouter "github.com/williamkoller/payment-system/internal/webhook/router"
 	"github.com/williamkoller/payment-system/pkg/logger"
 )
 
@@ -33,6 +34,7 @@ func main() {
 	middleware.Middlewares(r)
 	healthRouter.SetupRouter(r)
 	paymentRouter.SetupRouter(r)
+	webhookRouter.SetupWebhookRouter(r)
 
 	srv := &http.Server{
 		Addr:              ":" + configuration.Port,

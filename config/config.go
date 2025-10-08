@@ -8,20 +8,22 @@ import (
 )
 
 type Configuration struct {
-	Port         string
-	AppName      string
-	StripeApiKey string
-	StripeMethod string
+	Port          string
+	AppName       string
+	StripeApiKey  string
+	StripeMethod  string
+	StripeWebhook string
 }
 
 func LoadConfiguration() (*Configuration, error) {
 	_ = godotenv.Load()
 
 	cfg := &Configuration{
-		Port:         os.Getenv("PORT"),
-		AppName:      os.Getenv("APP_NAME"),
-		StripeApiKey: os.Getenv("STRIPE_API_KEY"),
-		StripeMethod: os.Getenv("STRIPE_METHOD"),
+		Port:          os.Getenv("PORT"),
+		AppName:       os.Getenv("APP_NAME"),
+		StripeApiKey:  os.Getenv("STRIPE_API_KEY"),
+		StripeMethod:  os.Getenv("STRIPE_METHOD"),
+		StripeWebhook: os.Getenv("STRIPE_WEBHOOK"),
 	}
 
 	if cfg.StripeApiKey == "" {

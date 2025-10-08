@@ -9,6 +9,7 @@ import (
 	"github.com/sony/gobreaker"
 	"github.com/stripe/stripe-go"
 	"github.com/stripe/stripe-go/paymentintent"
+	"github.com/stripe/stripe-go/refund"
 	"github.com/williamkoller/payment-system/config"
 	"github.com/williamkoller/payment-system/pkg/logger"
 )
@@ -16,6 +17,8 @@ import (
 type StripeClient interface {
 	CreatePaymentIntent(ctx context.Context, amount int64, currency, email string) (*stripe.PaymentIntent, error)
 	Capture(ctx context.Context, piID string) error
+	Cancel(ctx context.Context, piID string) error
+	Refund(ctx context.Context, stripeID string, amount int64) error
 }
 
 var configuration, _ = config.LoadConfiguration()
@@ -123,4 +126,47 @@ func (c *stripeClient) Capture(ctx context.Context, piID string) error {
 	}
 
 	return nil
+}
+
+func (c *stripeClient) Cancel(ctx context.Context, piID string) error {
+	result, err := c.cb.Execute(func() (interface{}, error) {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
+		return paymentintent.Cancel(piID, &stripe.PaymentIntentCancelParams{})
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if _, ok := result.(*stripe.PaymentIntent); !ok {
+		return errors.New("unexpected result type from Stripe cancel")
+	}
+
+	return nil
+}
+
+func (c *stripeClient) Refund(ctx context.Context, stripeID string, amount int64) error {
+	logger.Info("stripe payment intent ID", "StripeID", stripeID)
+
+	_, err := c.cb.Execute(func() (interface{}, error) {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
+		params := &stripe.RefundParams{
+			Amount:        stripe.Int64(amount),
+			PaymentIntent: stripe.String(stripeID),
+		}
+
+		return refund.New(params)
+	})
+
+	return err
 }

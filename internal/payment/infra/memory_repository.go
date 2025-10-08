@@ -8,8 +8,9 @@ import (
 )
 
 type InMemoryPaymentRepository struct {
-	data map[string]*domain.Payment
-	mu   sync.RWMutex
+	data      map[string]*domain.Payment
+	stripeMap map[string]*domain.Payment
+	mu        sync.RWMutex
 }
 
 func NewInMemoryPaymentRepository() *InMemoryPaymentRepository {
@@ -57,4 +58,14 @@ func (r *InMemoryPaymentRepository) Update(p *domain.Payment) error {
 	defer r.mu.Unlock()
 	r.data[p.ID] = p
 	return nil
+}
+
+func (r *InMemoryPaymentRepository) FindByStripeID(stripeID string) (*domain.Payment, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	p, ok := r.stripeMap[stripeID]
+	if !ok {
+		return nil, errors.New("stripe not found")
+	}
+	return p, nil
 }

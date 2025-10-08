@@ -12,7 +12,14 @@ func SetupRouter(e *gin.Engine) *gin.Engine {
 	stripeClient := infra.NewStripeClient()
 	usecase := application.NewPaymentUseCase(repo, stripeClient)
 	handler := interfaces.NewPaymentHandler(usecase)
-	e.POST("/payments", handler.CreatePayment)
-	e.GET("/payments/:id", handler.GetPaymentByID)
+	payments := e.Group("/payments")
+	{
+		payments.POST("/", handler.CreatePayment)
+		payments.GET("/:payment_id", handler.GetPaymentByID)
+		payments.POST("/:payment_id/capture", handler.CapturePayment)
+		payments.POST("/:payment_id/cancel", handler.CancelPayment)
+		payments.POST("/:payment_id/refund", handler.RefundPayment)
+	}
+
 	return e
 }

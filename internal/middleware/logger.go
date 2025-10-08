@@ -19,7 +19,6 @@ func ZapLoggerMiddleware() gin.HandlerFunc {
 			"request_id": requestID,
 			"method":     c.Request.Method,
 			"path":       c.Request.URL.Path,
-			"header":     c.Request.Header,
 		})
 
 		c.Set(loggerKey, ctxLogger)
