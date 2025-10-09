@@ -17,17 +17,18 @@ const (
 )
 
 type Payment struct {
-	ID        string
-	StripeID  string
-	Amount    int64
-	Currency  string
-	Status    PaymentStatus
-	Email     string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID            string
+	StripeID      string
+	Amount        int64
+	Currency      string
+	Status        PaymentStatus
+	Email         string
+	PaymentMethod string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
-func NewPayment(id string, amount int64, currency, email string) (*Payment, error) {
+func NewPayment(id string, amount int64, currency, email string, paymentMethod string) (*Payment, error) {
 	if amount <= 0 {
 		return nil, errors.New("amount must be greater than zero")
 	}
@@ -40,16 +41,21 @@ func NewPayment(id string, amount int64, currency, email string) (*Payment, erro
 		return nil, errors.New("email must be empty")
 	}
 
+	if paymentMethod == "" {
+		return nil, errors.New("payment method must be empty")
+	}
+
 	now := time.Now()
 
 	return &Payment{
-		ID:        id,
-		Amount:    amount,
-		Currency:  currency,
-		Status:    StatusPending,
-		Email:     email,
-		CreatedAt: now,
-		UpdatedAt: now,
+		ID:            id,
+		Amount:        amount,
+		Currency:      currency,
+		Status:        StatusPending,
+		Email:         email,
+		PaymentMethod: paymentMethod,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}, nil
 }
 
@@ -132,4 +138,8 @@ func (p *Payment) GetEmail() string {
 
 func (p *Payment) SetStripeID(stripeID string) {
 	p.StripeID = stripeID
+}
+
+func (p *Payment) GetPaymentMethod() string {
+	return p.PaymentMethod
 }

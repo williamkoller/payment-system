@@ -15,7 +15,7 @@ import (
 )
 
 type StripeClient interface {
-	CreatePaymentIntent(ctx context.Context, amount int64, currency, email string) (*stripe.PaymentIntent, error)
+	CreatePaymentIntent(ctx context.Context, amount int64, currency, email string, paymentMethod string) (*stripe.PaymentIntent, error)
 	Capture(ctx context.Context, piID string) error
 	Cancel(ctx context.Context, piID string) error
 	Refund(ctx context.Context, stripeID string, amount int64) error
@@ -50,7 +50,7 @@ func NewStripeClient() StripeClient {
 	}
 }
 
-func (c *stripeClient) CreatePaymentIntent(ctx context.Context, amount int64, currency, email string) (*stripe.PaymentIntent, error) {
+func (c *stripeClient) CreatePaymentIntent(ctx context.Context, amount int64, currency, email string, paymentMethod string) (*stripe.PaymentIntent, error) {
 	result, err := c.cb.Execute(func() (interface{}, error) {
 		select {
 		case <-ctx.Done():
@@ -63,12 +63,13 @@ func (c *stripeClient) CreatePaymentIntent(ctx context.Context, amount int64, cu
 
 		for i := 0; i < maxRetries; i++ {
 			params := &stripe.PaymentIntentParams{
-				Amount:        stripe.Int64(amount),
-				Currency:      stripe.String(currency),
-				ReceiptEmail:  stripe.String(email),
-				CaptureMethod: stripe.String(string(stripe.PaymentIntentCaptureMethodManual)),
-				Confirm:       stripe.Bool(true),
-				PaymentMethod: stripe.String(configuration.StripeMethod),
+				Amount:             stripe.Int64(amount),
+				Currency:           stripe.String(currency),
+				ReceiptEmail:       stripe.String(email),
+				CaptureMethod:      stripe.String(string(stripe.PaymentIntentCaptureMethodManual)),
+				Confirm:            stripe.Bool(true),
+				PaymentMethod:      stripe.String(configuration.StripeMethod),
+				PaymentMethodTypes: []*string{stripe.String(paymentMethod)},
 			}
 
 			pi, err := paymentintent.New(params)

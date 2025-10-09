@@ -28,9 +28,10 @@ type PaymentUseCase struct {
 }
 
 type PaymentInput struct {
-	Amount   int64
-	Currency string
-	Email    string
+	Amount        int64
+	Currency      string
+	Email         string
+	PaymentMethod string
 }
 
 func NewPaymentUseCase(Repository PaymentRepository, StripeClient infra.StripeClient) *PaymentUseCase {
@@ -39,7 +40,7 @@ func NewPaymentUseCase(Repository PaymentRepository, StripeClient infra.StripeCl
 
 func (u *PaymentUseCase) CreatePayment(input PaymentInput) (*domain.Payment, error) {
 	id := ulid.NewULID()
-	payment, err := domain.NewPayment(id, input.Amount, strings.ToUpper(input.Currency), input.Email)
+	payment, err := domain.NewPayment(id, input.Amount, strings.ToUpper(input.Currency), input.Email, input.PaymentMethod)
 
 	if err != nil {
 		return nil, err
@@ -50,7 +51,7 @@ func (u *PaymentUseCase) CreatePayment(input PaymentInput) (*domain.Payment, err
 	}
 
 	ctx := context.Background()
-	intent, err := u.StripeClient.CreatePaymentIntent(ctx, input.Amount, input.Currency, input.Email)
+	intent, err := u.StripeClient.CreatePaymentIntent(ctx, input.Amount, input.Currency, input.Email, input.PaymentMethod)
 	if err != nil {
 		payment.Fail()
 		_ = u.Repository.Update(payment)

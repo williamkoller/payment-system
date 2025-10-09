@@ -28,9 +28,10 @@ func (h *PaymentHandler) CreatePayment(c *gin.Context) {
 	}
 
 	payment, err := h.Usecase.CreatePayment(application.PaymentInput{
-		Amount:   dto.Amount,
-		Currency: dto.Currency,
-		Email:    dto.Email,
+		Amount:        dto.Amount,
+		Currency:      dto.Currency,
+		Email:         dto.Email,
+		PaymentMethod: dto.PaymentMethod,
 	})
 
 	if err != nil {
