@@ -17,15 +17,16 @@ const (
 )
 
 type Payment struct {
-	ID            string
-	StripeID      string
-	Amount        int64
-	Currency      string
-	Status        PaymentStatus
-	Email         string
-	PaymentMethod string
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID             string
+	StripeID       string
+	Amount         int64
+	Currency       string
+	Status         PaymentStatus
+	Email          string
+	PaymentMethod  string
+	IdempotencyKey string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 func NewPayment(id string, amount int64, currency, email string, paymentMethod string) (*Payment, error) {
@@ -142,4 +143,12 @@ func (p *Payment) SetStripeID(stripeID string) {
 
 func (p *Payment) GetPaymentMethod() string {
 	return p.PaymentMethod
+}
+
+func (p *Payment) GetIdempotencyKey() string {
+	return p.IdempotencyKey
+}
+
+func (p *Payment) SetIdempotencyKey(idempotencyKey string) {
+	p.IdempotencyKey = idempotencyKey
 }

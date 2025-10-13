@@ -3,6 +3,7 @@ package interfaces
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/williamkoller/payment-system/internal/middleware"
@@ -35,16 +36,39 @@ func (h *PaymentHandler) CreatePayment(c *gin.Context) {
 	})
 
 	if err != nil {
-		log.Errorw("Error creating payment", "err", err.Error(), "status", payment.Status)
-		c.JSON(http.StatusBadGateway, gin.H{
+		status := ""
+		if payment != nil {
+			status = string(payment.Status)
+		}
+
+		var httpCode int
+		var message string
+
+		switch {
+		case strings.Contains(err.Error(), "already processed"):
+			httpCode = http.StatusOK
+			message = "Payment already processed — returning existing transaction"
+		case strings.Contains(err.Error(), "already exists"):
+			httpCode = http.StatusConflict
+			message = "Payment with this idempotency key already exists"
+		case strings.Contains(err.Error(), "stripe payment failed"):
+			httpCode = http.StatusBadGateway
+			message = "Payment creation failed due to Stripe error"
+		default:
+			httpCode = http.StatusInternalServerError
+			message = "Unexpected error while creating payment"
+		}
+
+		log.Errorw("Error creating payment", "err", err.Error(), "status", status)
+		c.JSON(httpCode, gin.H{
 			"error":   err.Error(),
-			"status":  payment.Status,
-			"message": "Payment creation failed due to external error (Stripe)",
+			"status":  status,
+			"message": message,
 		})
 		return
 	}
 
-	log.Infow("Created Payment", "id", payment.ID)
+	log.Infow("Created payment", "id", payment.ID, "status", payment.Status)
 	c.JSON(http.StatusCreated, ToPaymentResponse(payment))
 }
 

@@ -20,6 +20,7 @@ type PaymentRepository interface {
 	Remove(id string) error
 	Update(payment *domain.Payment) error
 	FindByStripeID(stripeID string) (*domain.Payment, error)
+	FindByIdempotencyKey(idempotencyKey string) (*domain.Payment, error)
 }
 
 type PaymentUseCase struct {
@@ -39,18 +40,37 @@ func NewPaymentUseCase(Repository PaymentRepository, StripeClient infra.StripeCl
 }
 
 func (u *PaymentUseCase) CreatePayment(input PaymentInput) (*domain.Payment, error) {
-	id := ulid.NewULID()
-	payment, err := domain.NewPayment(id, input.Amount, strings.ToUpper(input.Currency), input.Email, input.PaymentMethod)
+	ctx := context.Background()
+	idempotencyKeyReq := fmt.Sprintf("%s_%s_%s_%v", input.Email, input.PaymentMethod, input.Currency, input.Amount)
 
+	existingPayment, err := u.Repository.FindByIdempotencyKey(idempotencyKeyReq)
 	if err != nil {
 		return nil, err
 	}
+
+	if existingPayment != nil {
+		switch existingPayment.Status {
+		case domain.StatusCompleted:
+			return existingPayment, fmt.Errorf("transaction already processed successfully")
+		case domain.StatusFailed:
+			return existingPayment, fmt.Errorf("transaction already attempted and failed")
+		default:
+			return existingPayment, fmt.Errorf("transaction already exists with status: %s", existingPayment.Status)
+		}
+	}
+
+	id := ulid.NewULID()
+	payment, err := domain.NewPayment(id, input.Amount, strings.ToUpper(input.Currency), input.Email, input.PaymentMethod)
+	if err != nil {
+		return nil, err
+	}
+
+	payment.SetIdempotencyKey(idempotencyKeyReq)
 
 	if err := u.Repository.Save(payment); err != nil {
 		return nil, err
 	}
 
-	ctx := context.Background()
 	intent, err := u.StripeClient.CreatePaymentIntent(ctx, input.Amount, input.Currency, input.Email, input.PaymentMethod)
 	if err != nil {
 		payment.Fail()
