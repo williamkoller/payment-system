@@ -69,3 +69,15 @@ func (r *InMemoryPaymentRepository) FindByStripeID(stripeID string) (*domain.Pay
 	}
 	return p, nil
 }
+
+func (r *InMemoryPaymentRepository) FindByIdempotencyKey(idempotencyKey string) (*domain.Payment, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, p := range r.data {
+		if p.GetIdempotencyKey() == idempotencyKey {
+			return p, nil
+		}
+	}
+
+	return nil, nil
+}
