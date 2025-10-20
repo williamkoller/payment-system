@@ -1,20 +1,55 @@
 package logger
 
-import "go.uber.org/zap"
+import (
+	"log"
+	_ "os"
+	"sync"
 
-var log *zap.SugaredLogger
+	"go.uber.org/zap"
+	_ "go.uber.org/zap/zapcore"
+)
 
-func InitLogger() {
-	rawLogger, _ := zap.NewProduction()
-	log = rawLogger.Sugar()
+var (
+	logger  *zap.SugaredLogger
+	once    sync.Once
+	initErr error
+)
+
+func InitLogger(mode string) error {
+	once.Do(func() {
+		var zapLogger *zap.Logger
+
+		switch mode {
+		case "dev":
+			zapLogger, initErr = zap.NewDevelopment()
+		default:
+			cfg := zap.NewProductionConfig()
+			cfg.OutputPaths = []string{"stdout"} // Logs go to stdout
+			cfg.ErrorOutputPaths = []string{"stderr"}
+			zapLogger, initErr = cfg.Build()
+		}
+
+		if initErr != nil {
+			log.Printf("Failed to initialize zap logger: %v", initErr)
+			return
+		}
+
+		logger = zapLogger.Sugar()
+	})
+
+	return initErr
 }
 
 func WithFields(fields map[string]interface{}) *zap.SugaredLogger {
-	return log.With(zapFields(fields)...)
+	if logger == nil {
+		log.Println("Logger not initialized")
+		return nil
+	}
+	return logger.With(zapFields(fields)...)
 }
 
 func zapFields(fields map[string]interface{}) []interface{} {
-	var z []interface{}
+	z := make([]interface{}, 0, len(fields)*2)
 	for k, v := range fields {
 		z = append(z, k, v)
 	}
@@ -22,21 +57,33 @@ func zapFields(fields map[string]interface{}) []interface{} {
 }
 
 func Info(msg string, fields ...interface{}) {
-	log.Infow(msg, fields...)
+	if logger != nil {
+		logger.Infow(msg, fields...)
+	}
 }
 
 func Error(msg string, fields ...interface{}) {
-	log.Errorw(msg, fields...)
+	if logger != nil {
+		logger.Errorw(msg, fields...)
+	}
+}
+
+func Fatal(msg string, fields ...interface{}) {
+	if logger != nil {
+		logger.Fatalw(msg, fields...)
+	}
 }
 
 func Sync() {
-	log.Sync()
-}
-
-func Fatalw(msg string, fields ...interface{}) {
-	log.Fatalw(msg, fields...)
+	if logger != nil {
+		_ = logger.Sync()
+	}
 }
 
 func Default() *zap.SugaredLogger {
-	return log
+	if logger == nil {
+		log.Println("Logger not initialized")
+		return nil
+	}
+	return logger
 }

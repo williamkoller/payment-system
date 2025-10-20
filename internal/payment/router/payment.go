@@ -7,7 +7,7 @@ import (
 	"github.com/williamkoller/payment-system/internal/payment/interfaces"
 )
 
-func SetupRouter(e *gin.Engine) *gin.Engine {
+func SetupRouter(e *gin.Engine) {
 	repo := infra.NewInMemoryPaymentRepository()
 	stripeClient := infra.NewStripeClient()
 	usecase := application.NewPaymentUseCase(repo, stripeClient)
@@ -20,6 +20,4 @@ func SetupRouter(e *gin.Engine) *gin.Engine {
 		payments.POST("/:payment_id/cancel", handler.CancelPayment)
 		payments.POST("/:payment_id/refund", handler.RefundPayment)
 	}
-
-	return e
 }

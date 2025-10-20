@@ -1,0 +1,13 @@
+version: "3.9"
+services:
+  go-payment-system:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: go-payment-system
+    depends_on:
+      - prometheus
+    env_file:
+      - .env
+    ports:
+      - ${PORT}:${PORT}

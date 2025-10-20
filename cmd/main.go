@@ -22,7 +22,10 @@ import (
 func main() {
 	r := gin.Default()
 
-	logger.InitLogger()
+	err := logger.InitLogger("dev")
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer logger.Sync()
 
 	configuration, err := config.LoadConfiguration()
@@ -37,15 +40,15 @@ func main() {
 	webhookRouter.SetupWebhookRouter(r)
 
 	srv := &http.Server{
-		Addr:              ":" + configuration.Port,
+		Addr:              ":" + configuration.App.Port,
 		Handler:           r,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	go func() {
-		logger.Info("Starting server", "AppName", configuration.AppName)
+		logger.Info("Starting server", "AppName", configuration.App.AppName)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Fatalw("Error starting server", "err", err)
+			logger.Fatal("Error starting server", "err", err)
 		}
 	}()
 

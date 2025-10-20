@@ -44,7 +44,7 @@ func newDefaultCircuitBreaker() *gobreaker.CircuitBreaker {
 }
 
 func NewStripeClient() StripeClient {
-	stripe.Key = configuration.StripeApiKey
+	stripe.Key = configuration.Stripe.StripeApiKey
 	return &stripeClient{
 		cb: newDefaultCircuitBreaker(),
 	}
@@ -68,7 +68,7 @@ func (c *stripeClient) CreatePaymentIntent(ctx context.Context, amount int64, cu
 				ReceiptEmail:       stripe.String(email),
 				CaptureMethod:      stripe.String(string(stripe.PaymentIntentCaptureMethodManual)),
 				Confirm:            stripe.Bool(true),
-				PaymentMethod:      stripe.String(configuration.StripeMethod),
+				PaymentMethod:      stripe.String(configuration.Stripe.StripeMethod),
 				PaymentMethodTypes: []*string{stripe.String(paymentMethod)},
 			}
 

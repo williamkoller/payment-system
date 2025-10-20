@@ -1,7 +1,6 @@
 package interfaces
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -74,21 +73,27 @@ func (h *PaymentHandler) CreatePayment(c *gin.Context) {
 
 func (h *PaymentHandler) GetPaymentByID(c *gin.Context) {
 	var uri dtos.IdentifyPaymentDto
-	fmt.Println(uri)
+
 	if err := c.ShouldBindUri(&uri); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payment ID"})
+		return
 	}
 
 	paymentFound, err := h.Usecase.FindPaymentByID(uri)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	if paymentFound == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "payment not found"})
+		return
 	}
 
 	log := middleware.FromContext(c)
 	log.Infow("Found Payment", "id", paymentFound.ID)
 
 	c.JSON(http.StatusOK, ToPaymentResponse(paymentFound))
-
 }
 
 func (h *PaymentHandler) CapturePayment(c *gin.Context) {

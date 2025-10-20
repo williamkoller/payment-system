@@ -91,6 +91,9 @@ func (u *PaymentUseCase) CreatePayment(input PaymentInput) (*domain.Payment, err
 func (u *PaymentUseCase) FindPaymentByID(i dtos.IdentifyPaymentDto) (*domain.Payment, error) {
 	paymentFound, err := u.Repository.FindByID(i.PaymentID)
 	if err != nil {
+		return nil, fmt.Errorf("payment not found: %w", err)
+	}
+	if paymentFound == nil {
 		return nil, errors.New("payment not found")
 	}
 	return paymentFound, nil
