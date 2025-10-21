@@ -1,0 +1,1597 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>cmd: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/williamkoller/payment-system/cmd/main.go (0.0%)</option>
+				
+				<option value="file1">github.com/williamkoller/payment-system/config/config.go (0.0%)</option>
+				
+				<option value="file2">github.com/williamkoller/payment-system/config/database.go (0.0%)</option>
+				
+				<option value="file3">github.com/williamkoller/payment-system/internal/healthz/router/router.go (0.0%)</option>
+				
+				<option value="file4">github.com/williamkoller/payment-system/internal/middleware/logger.go (0.0%)</option>
+				
+				<option value="file5">github.com/williamkoller/payment-system/internal/middleware/middlewares.go (0.0%)</option>
+				
+				<option value="file6">github.com/williamkoller/payment-system/internal/payment/application/usecase.go (0.0%)</option>
+				
+				<option value="file7">github.com/williamkoller/payment-system/internal/payment/domain/payment.go (0.0%)</option>
+				
+				<option value="file8">github.com/williamkoller/payment-system/internal/payment/infra/memory_repository.go (0.0%)</option>
+				
+				<option value="file9">github.com/williamkoller/payment-system/internal/payment/infra/stripe_client.go (0.0%)</option>
+				
+				<option value="file10">github.com/williamkoller/payment-system/internal/payment/interfaces/handler.go (0.0%)</option>
+				
+				<option value="file11">github.com/williamkoller/payment-system/internal/payment/interfaces/mapper.go (0.0%)</option>
+				
+				<option value="file12">github.com/williamkoller/payment-system/internal/payment/repository/payment_repository.go (100.0%)</option>
+				
+				<option value="file13">github.com/williamkoller/payment-system/internal/payment/router/payment.go (0.0%)</option>
+				
+				<option value="file14">github.com/williamkoller/payment-system/internal/webhook/router/webhook.go (0.0%)</option>
+				
+				<option value="file15">github.com/williamkoller/payment-system/internal/webhook/stripe/handler.go (0.0%)</option>
+				
+				<option value="file16">github.com/williamkoller/payment-system/internal/webhook/stripe/processor.go (0.0%)</option>
+				
+				<option value="file17">github.com/williamkoller/payment-system/pkg/logger/logger.go (0.0%)</option>
+				
+				<option value="file18">github.com/williamkoller/payment-system/pkg/ulid/ulid.go (0.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "context"
+        "errors"
+        "log"
+        "net/http"
+        "os"
+        "os/signal"
+        "syscall"
+        "time"
+
+        "github.com/gin-gonic/gin"
+        "github.com/joho/godotenv"
+        "github.com/williamkoller/payment-system/config"
+        healthRouter "github.com/williamkoller/payment-system/internal/healthz/router"
+        "github.com/williamkoller/payment-system/internal/middleware"
+        paymentRouter "github.com/williamkoller/payment-system/internal/payment/router"
+        webhookRouter "github.com/williamkoller/payment-system/internal/webhook/router"
+        "github.com/williamkoller/payment-system/pkg/logger"
+)
+
+func main() <span class="cov0" title="0">{
+        _ = godotenv.Load()
+        
+        r := gin.Default()
+
+        err := logger.InitLogger("dev")
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal(err)
+        }</span>
+        <span class="cov0" title="0">defer logger.Sync()
+
+        configuration, err := config.LoadConfiguration()
+
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal(err)
+        }</span>
+
+        <span class="cov0" title="0">database := config.NewDatabaseConnection()
+        config.RunMigrations(database, "")
+
+        middleware.Middlewares(r)
+        healthRouter.SetupRouter(r)
+        paymentRouter.SetupRouter(r)
+        webhookRouter.SetupWebhookRouter(r)
+
+        srv := &amp;http.Server{
+                Addr:              ":" + configuration.App.Port,
+                Handler:           r,
+                ReadHeaderTimeout: 5 * time.Second,
+        }
+
+        go func() </span><span class="cov0" title="0">{
+                logger.Info("Starting server", "AppName", configuration.App.AppName)
+                if err := srv.ListenAndServe(); err != nil &amp;&amp; !errors.Is(err, http.ErrServerClosed) </span><span class="cov0" title="0">{
+                        logger.Fatal("Error starting server", "err", err)
+                }</span>
+        }()
+
+        <span class="cov0" title="0">quit := make(chan os.Signal, 1)
+        signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+        &lt;-quit
+
+        ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+        defer cancel()
+
+        _ = srv.Shutdown(ctx)
+        logger.Info("Server shutting down")</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package config
+
+import (
+        "errors"
+        "fmt"
+        "os"
+        "strconv"
+
+        "github.com/joho/godotenv"
+)
+
+type AppConfiguration struct {
+        Port    string
+        AppName string
+}
+
+type StripeConfiguration struct {
+        StripeApiKey  string
+        StripeMethod  string
+        StripeWebhook string
+}
+
+type DatabaseConfiguration struct {
+        Host     string
+        Port     int
+        Username string
+        Password string
+        Database string
+}
+
+type ResponseConfiguration struct {
+        App      AppConfiguration
+        Stripe   StripeConfiguration
+        Database DatabaseConfiguration
+}
+
+func LoadConfiguration() (*ResponseConfiguration, error) <span class="cov0" title="0">{
+        _ = godotenv.Load()
+
+        app, err := loadAppConfiguration()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, errors.New("Error loading app configuration: " + err.Error())
+        }</span>
+
+        <span class="cov0" title="0">stripe, err := loadStripeConfiguration()
+
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, errors.New("Error loading Stripe configuration: " + err.Error())
+        }</span>
+
+        <span class="cov0" title="0">return &amp;ResponseConfiguration{
+                App:    *app,
+                Stripe: *stripe,
+        }, nil</span>
+}
+
+func loadAppConfiguration() (*AppConfiguration, error) <span class="cov0" title="0">{
+        app := &amp;AppConfiguration{
+                Port:    os.Getenv("PORT"),
+                AppName: os.Getenv("APP_NAME"),
+        }
+
+        return app, nil
+}</span>
+
+func loadStripeConfiguration() (*StripeConfiguration, error) <span class="cov0" title="0">{
+        stripe := &amp;StripeConfiguration{
+                StripeApiKey:  os.Getenv("STRIPE_API_KEY"),
+                StripeMethod:  os.Getenv("STRIPE_METHOD"),
+                StripeWebhook: os.Getenv("STRIPE_WEBHOOK"),
+        }
+
+        if stripe.StripeApiKey == "" </span><span class="cov0" title="0">{
+                return nil, errors.New("STRIPE_API_KEY is required")
+        }</span>
+
+        <span class="cov0" title="0">return stripe, nil</span>
+
+}
+
+func LoadDatabaseConfiguration() (*DatabaseConfiguration, error) <span class="cov0" title="0">{
+        port, err := strconv.Atoi(os.Getenv("DB_PORT"))
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("invalid DB_PORT: %v", err)
+        }</span>
+        <span class="cov0" title="0">db := &amp;DatabaseConfiguration{
+                Host:     os.Getenv("DB_HOST"),
+                Port:     port,
+                Username: os.Getenv("DB_USERNAME"),
+                Password: os.Getenv("DB_PASSWORD"),
+                Database: os.Getenv("DB_DATABASE"),
+        }
+
+        return db, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package config
+
+import (
+        "errors"
+        "fmt"
+        "log"
+        "os"
+        "path/filepath"
+
+        "github.com/golang-migrate/migrate/v4"
+        "gorm.io/driver/postgres"
+        "gorm.io/gorm"
+
+        _ "github.com/golang-migrate/migrate/v4/source/file"
+        _ "github.com/lib/pq"
+
+        migratePG "github.com/golang-migrate/migrate/v4/database/postgres"
+)
+
+func NewDatabaseConnection() *gorm.DB <span class="cov0" title="0">{
+        config, err := LoadDatabaseConfiguration()
+        if err != nil </span><span class="cov0" title="0">{
+                panic(err)</span>
+        }
+
+        <span class="cov0" title="0">sqlInfo := fmt.Sprintf(
+                "host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+                config.Host, config.Port, config.Username, config.Password, config.Database,
+        )
+
+        db, err := gorm.Open(postgres.Open(sqlInfo), &amp;gorm.Config{TranslateError: true})
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("open database connection failed: %v", err)
+        }</span>
+
+        <span class="cov0" title="0">log.Println("✅ Connected to DB")
+        return db</span>
+}
+
+func RunMigrations(gormDB *gorm.DB, migrationsPath string) <span class="cov0" title="0">{
+        sqlDB, err := gormDB.DB()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal("failed to get raw database from GORM: ", err)
+        }</span>
+
+        <span class="cov0" title="0">driver, err := migratePG.WithInstance(sqlDB, &amp;migratePG.Config{})
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal("migration WithInstance failed: ", err)
+        }</span>
+
+        <span class="cov0" title="0">wd, err := os.Getwd()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal("could not get working directory: ", err)
+        }</span>
+
+        <span class="cov0" title="0">if migrationsPath == "" </span><span class="cov0" title="0">{
+                migrationsPath = "file://" + filepath.Join(wd, "db/migrations")
+        }</span>
+
+        <span class="cov0" title="0">m, err := migrate.NewWithDatabaseInstance(migrationsPath, "postgres", driver)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal("migration NewWithDatabaseInstance failed: ", err)
+        }</span>
+
+        <span class="cov0" title="0">if err := m.Up(); err != nil </span><span class="cov0" title="0">{
+                if errors.Is(err, migrate.ErrNoChange) </span><span class="cov0" title="0">{
+                        log.Println("✅ No new migrations to apply.")
+                        return
+                }</span>
+                <span class="cov0" title="0">log.Fatal("migration Up failed: ", err)</span>
+        }
+
+        <span class="cov0" title="0">log.Println("✅ Migrations completed successfully.")</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package router
+
+import "github.com/gin-gonic/gin"
+
+func SetupRouter(e *gin.Engine) *gin.Engine <span class="cov0" title="0">{
+        e.GET("/healthz", func(c *gin.Context) </span><span class="cov0" title="0">{
+                c.JSON(200, gin.H{"status": "ok"})
+        }</span>)
+
+        <span class="cov0" title="0">return e</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package middleware
+
+import (
+        "time"
+
+        "github.com/gin-gonic/gin"
+        "github.com/williamkoller/payment-system/pkg/logger"
+        "github.com/williamkoller/payment-system/pkg/ulid"
+        "go.uber.org/zap"
+)
+
+const loggerKey = "logger"
+
+func ZapLoggerMiddleware() gin.HandlerFunc <span class="cov0" title="0">{
+        return func(c *gin.Context) </span><span class="cov0" title="0">{
+                start := time.Now()
+                requestID := ulid.NewULID()
+                ctxLogger := logger.WithFields(map[string]interface{}{
+                        "request_id": requestID,
+                        "method":     c.Request.Method,
+                        "path":       c.Request.URL.Path,
+                })
+
+                c.Set(loggerKey, ctxLogger)
+
+                c.Next()
+
+                duration := time.Since(start)
+                status := c.Writer.Status()
+
+                ctxLogger.Infow("request completed",
+                        "status", status,
+                        "duration", duration.String(),
+                )
+        }</span>
+}
+
+func FromContext(c *gin.Context) *zap.SugaredLogger <span class="cov0" title="0">{
+        if log, exists := c.Get(loggerKey); exists </span><span class="cov0" title="0">{
+                if lgr, ok := log.(*zap.SugaredLogger); ok </span><span class="cov0" title="0">{
+                        return lgr
+                }</span>
+        }
+        <span class="cov0" title="0">return logger.Default()</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package middleware
+
+import "github.com/gin-gonic/gin"
+
+func Middlewares(e *gin.Engine) <span class="cov0" title="0">{
+        e.Use(gin.Recovery())
+        e.Use(ZapLoggerMiddleware())
+}</span>
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package application
+
+import (
+        "context"
+        "errors"
+        "fmt"
+        "strings"
+
+        "github.com/stripe/stripe-go"
+        "github.com/williamkoller/payment-system/internal/payment/domain"
+        "github.com/williamkoller/payment-system/internal/payment/dtos"
+        "github.com/williamkoller/payment-system/internal/payment/infra"
+        "github.com/williamkoller/payment-system/pkg/ulid"
+)
+
+type PaymentRepository interface {
+        Save(payment *domain.Payment) error
+        FindByID(id string) (*domain.Payment, error)
+        FindAll() ([]*domain.Payment, error)
+        Remove(id string) error
+        Update(payment *domain.Payment) error
+        FindByStripeID(stripeID string) (*domain.Payment, error)
+        FindByIdempotencyKey(idempotencyKey string) (*domain.Payment, error)
+}
+
+type PaymentUseCase struct {
+        Repository   PaymentRepository
+        StripeClient infra.StripeClient
+}
+
+type PaymentInput struct {
+        Amount        int64
+        Currency      string
+        Email         string
+        PaymentMethod string
+}
+
+func NewPaymentUseCase(Repository PaymentRepository, StripeClient infra.StripeClient) *PaymentUseCase <span class="cov0" title="0">{
+        return &amp;PaymentUseCase{Repository: Repository, StripeClient: StripeClient}
+}</span>
+
+func (u *PaymentUseCase) CreatePayment(input PaymentInput) (*domain.Payment, error) <span class="cov0" title="0">{
+        ctx := context.Background()
+        idempotencyKeyReq := fmt.Sprintf("%s_%s_%s_%v", input.Email, input.PaymentMethod, input.Currency, input.Amount)
+
+        existingPayment, err := u.Repository.FindByIdempotencyKey(idempotencyKeyReq)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">if existingPayment != nil </span><span class="cov0" title="0">{
+                switch existingPayment.Status </span>{
+                case domain.StatusCompleted:<span class="cov0" title="0">
+                        return existingPayment, fmt.Errorf("transaction already processed successfully")</span>
+                case domain.StatusFailed:<span class="cov0" title="0">
+                        return existingPayment, fmt.Errorf("transaction already attempted and failed")</span>
+                default:<span class="cov0" title="0">
+                        return existingPayment, fmt.Errorf("transaction already exists with status: %s", existingPayment.Status)</span>
+                }
+        }
+
+        <span class="cov0" title="0">id := ulid.NewULID()
+        payment, err := domain.NewPayment(id, input.Amount, strings.ToUpper(input.Currency), input.Email, input.PaymentMethod)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">payment.SetIdempotencyKey(idempotencyKeyReq)
+
+        if err := u.Repository.Save(payment); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">intent, err := u.StripeClient.CreatePaymentIntent(ctx, input.Amount, input.Currency, input.Email, input.PaymentMethod)
+        if err != nil </span><span class="cov0" title="0">{
+                payment.Fail()
+                _ = u.Repository.Update(payment)
+                return payment, fmt.Errorf("stripe payment failed: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">payment.Complete()
+        payment.SetStripeID(intent.ID)
+
+        if err := u.Repository.Update(payment); err != nil </span><span class="cov0" title="0">{
+                return payment, err
+        }</span>
+
+        <span class="cov0" title="0">return payment, nil</span>
+}
+
+func (u *PaymentUseCase) FindPaymentByID(i dtos.IdentifyPaymentDto) (*domain.Payment, error) <span class="cov0" title="0">{
+        paymentFound, err := u.Repository.FindByID(i.PaymentID)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("payment not found: %w", err)
+        }</span>
+        <span class="cov0" title="0">if paymentFound == nil </span><span class="cov0" title="0">{
+                return nil, errors.New("payment not found")
+        }</span>
+        <span class="cov0" title="0">return paymentFound, nil</span>
+}
+
+func (u *PaymentUseCase) Capture(ctx context.Context, i dtos.IdentifyPaymentDto) (*domain.Payment, error) <span class="cov0" title="0">{
+        payment, err := u.Repository.FindByID(i.PaymentID)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("payment not found: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">if payment.StripeID == "" </span><span class="cov0" title="0">{
+                return nil, errors.New("missing Stripe payment intent ID")
+        }</span>
+
+        <span class="cov0" title="0">err = u.StripeClient.Capture(ctx, payment.StripeID)
+        if err != nil </span><span class="cov0" title="0">{
+                payment.Fail()
+                _ = u.Repository.Update(payment)
+                return payment, fmt.Errorf("stripe capture failed: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">payment.Capture()
+        if err := u.Repository.Update(payment); err != nil </span><span class="cov0" title="0">{
+                return payment, err
+        }</span>
+
+        <span class="cov0" title="0">return payment, nil</span>
+}
+
+func (u *PaymentUseCase) Cancel(ctx context.Context, i dtos.IdentifyPaymentDto) (*domain.Payment, error) <span class="cov0" title="0">{
+        payment, err := u.Repository.FindByID(i.PaymentID)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("payment not found: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">if payment.StripeID == "" </span><span class="cov0" title="0">{
+                return nil, errors.New("missing Stripe payment intent ID")
+        }</span>
+
+        <span class="cov0" title="0">if err := payment.CanCancel(); err != nil </span><span class="cov0" title="0">{
+                payment.Fail()
+                _ = u.Repository.Update(payment)
+                return payment, fmt.Errorf("stripe cancel failed: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">err = u.StripeClient.Cancel(ctx, payment.StripeID)
+        if err != nil </span><span class="cov0" title="0">{
+                var stripeErr *stripe.Error
+                if errors.As(err, &amp;stripeErr) </span><span class="cov0" title="0">{
+                        if stripeErr.Code == stripe.ErrorCodePaymentIntentUnexpectedState </span><span class="cov0" title="0">{
+                                payment.Capture()
+                                _ = u.Repository.Update(payment)
+                                return payment, fmt.Errorf("cannot cancel payment: already captured on Stripe")
+                        }</span>
+
+                        <span class="cov0" title="0">if stripeErr.HTTPStatusCode &gt;= 400 &amp;&amp; stripeErr.HTTPStatusCode &lt; 500 </span><span class="cov0" title="0">{
+                                return payment, fmt.Errorf("stripe client error: %s (%s)", stripeErr.Msg, stripeErr.Code)
+                        }</span>
+
+                        <span class="cov0" title="0">if stripeErr.HTTPStatusCode &gt;= 500 </span><span class="cov0" title="0">{
+                                return payment, fmt.Errorf("stripe server error: %s", stripeErr.Msg)
+                        }</span>
+                }
+
+                <span class="cov0" title="0">payment.Fail()
+                _ = u.Repository.Update(payment)
+                return payment, fmt.Errorf("stripe cancel failed: %w", err)</span>
+        }
+
+        <span class="cov0" title="0">payment.Cancel()
+        if err := u.Repository.Update(payment); err != nil </span><span class="cov0" title="0">{
+                return payment, err
+        }</span>
+        <span class="cov0" title="0">return payment, nil</span>
+}
+
+func (u *PaymentUseCase) Refund(ctx context.Context, uri dtos.IdentifyPaymentDto, pr dtos.PaymentRefundDto) (*domain.Payment, error) <span class="cov0" title="0">{
+        payment, err := u.Repository.FindByID(uri.PaymentID)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("payment not found: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">if payment.StripeID == "" </span><span class="cov0" title="0">{
+                return nil, errors.New("missing Stripe payment intent ID")
+        }</span>
+
+        <span class="cov0" title="0">if err := payment.CanRefund(); err != nil </span><span class="cov0" title="0">{
+                payment.Fail()
+                _ = u.Repository.Update(payment)
+                return payment, fmt.Errorf("stripe refund failed: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">err = u.StripeClient.Refund(ctx, payment.StripeID, pr.Amount)
+        if err != nil </span><span class="cov0" title="0">{
+                payment.Fail()
+                _ = u.Repository.Update(payment)
+                return payment, fmt.Errorf("stripe refund failed: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">payment.Refund()
+        if err := u.Repository.Update(payment); err != nil </span><span class="cov0" title="0">{
+                return payment, err
+        }</span>
+
+        <span class="cov0" title="0">return payment, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package domain
+
+import (
+        "errors"
+        "time"
+)
+
+type PaymentStatus string
+
+const (
+        StatusPending   PaymentStatus = "PENDING"
+        StatusCompleted PaymentStatus = "COMPLETED"
+        StatusFailed    PaymentStatus = "FAILED"
+        StatusCanceled  PaymentStatus = "CANCELED"
+        StatusCaptured  PaymentStatus = "CAPTURED"
+        StatusRefund    PaymentStatus = "REFUND"
+)
+
+type Payment struct {
+        ID             string
+        StripeID       string
+        Amount         int64
+        Currency       string
+        Status         PaymentStatus
+        Email          string
+        PaymentMethod  string
+        IdempotencyKey string
+        CreatedAt      time.Time
+        UpdatedAt      time.Time
+}
+
+func NewPayment(id string, amount int64, currency, email string, paymentMethod string) (*Payment, error) <span class="cov0" title="0">{
+        if amount &lt;= 0 </span><span class="cov0" title="0">{
+                return nil, errors.New("amount must be greater than zero")
+        }</span>
+
+        <span class="cov0" title="0">if currency == "" </span><span class="cov0" title="0">{
+                return nil, errors.New("currency must be empty")
+        }</span>
+
+        <span class="cov0" title="0">if email == "" </span><span class="cov0" title="0">{
+                return nil, errors.New("email must be empty")
+        }</span>
+
+        <span class="cov0" title="0">if paymentMethod == "" </span><span class="cov0" title="0">{
+                return nil, errors.New("payment method must be empty")
+        }</span>
+
+        <span class="cov0" title="0">now := time.Now()
+
+        return &amp;Payment{
+                ID:            id,
+                Amount:        amount,
+                Currency:      currency,
+                Status:        StatusPending,
+                Email:         email,
+                PaymentMethod: paymentMethod,
+                CreatedAt:     now,
+                UpdatedAt:     now,
+        }, nil</span>
+}
+
+func (p *Payment) Complete() <span class="cov0" title="0">{
+        p.Status = StatusCompleted
+        p.UpdatedAt = time.Now()
+}</span>
+
+func (p *Payment) Cancel() <span class="cov0" title="0">{
+        p.Status = StatusCanceled
+        p.UpdatedAt = time.Now()
+}</span>
+
+func (p *Payment) Fail() <span class="cov0" title="0">{
+        p.Status = StatusFailed
+        p.UpdatedAt = time.Now()
+}</span>
+
+func (p *Payment) Capture() <span class="cov0" title="0">{
+        p.Status = StatusCaptured
+        p.UpdatedAt = time.Now()
+}</span>
+
+func (p *Payment) Refund() <span class="cov0" title="0">{
+        p.Status = StatusRefund
+        p.UpdatedAt = time.Now()
+}</span>
+
+func (p *Payment) CanCancel() error <span class="cov0" title="0">{
+        if p.Status == StatusCanceled </span><span class="cov0" title="0">{
+                return errors.New("cannot cancel: payment already captured")
+        }</span>
+
+        <span class="cov0" title="0">if p.Status == StatusCanceled </span><span class="cov0" title="0">{
+                return errors.New("payment already canceled")
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (p *Payment) CanRefund() error <span class="cov0" title="0">{
+        if p.Status != StatusCaptured </span><span class="cov0" title="0">{
+                return errors.New("payment must be captured before refund is allowed")
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (p *Payment) GetID() string <span class="cov0" title="0">{
+        return p.ID
+}</span>
+
+func (p *Payment) GetStripeID() string <span class="cov0" title="0">{
+        return p.StripeID
+}</span>
+
+func (p *Payment) GetAmount() int64 <span class="cov0" title="0">{
+        return p.Amount
+}</span>
+
+func (p *Payment) GetCurrency() string <span class="cov0" title="0">{
+        return p.Currency
+}</span>
+
+func (p *Payment) GetStatus() PaymentStatus <span class="cov0" title="0">{
+        return p.Status
+}</span>
+
+func (p *Payment) GetCreatedAt() time.Time <span class="cov0" title="0">{
+        return p.CreatedAt
+}</span>
+
+func (p *Payment) GetUpdatedAt() time.Time <span class="cov0" title="0">{
+        return p.UpdatedAt
+}</span>
+
+func (p *Payment) GetEmail() string <span class="cov0" title="0">{
+        return p.Email
+}</span>
+
+func (p *Payment) SetStripeID(stripeID string) <span class="cov0" title="0">{
+        p.StripeID = stripeID
+}</span>
+
+func (p *Payment) GetPaymentMethod() string <span class="cov0" title="0">{
+        return p.PaymentMethod
+}</span>
+
+func (p *Payment) GetIdempotencyKey() string <span class="cov0" title="0">{
+        return p.IdempotencyKey
+}</span>
+
+func (p *Payment) SetIdempotencyKey(idempotencyKey string) <span class="cov0" title="0">{
+        p.IdempotencyKey = idempotencyKey
+}</span>
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">package infra
+
+import (
+        "errors"
+        "sync"
+
+        "github.com/williamkoller/payment-system/internal/payment/domain"
+)
+
+type InMemoryPaymentRepository struct {
+        data      map[string]*domain.Payment
+        stripeMap map[string]*domain.Payment
+        mu        sync.RWMutex
+}
+
+func NewInMemoryPaymentRepository() *InMemoryPaymentRepository <span class="cov0" title="0">{
+        return &amp;InMemoryPaymentRepository{
+                data: make(map[string]*domain.Payment),
+        }
+}</span>
+
+func (r *InMemoryPaymentRepository) Save(p *domain.Payment) error <span class="cov0" title="0">{
+        r.mu.Lock()
+        defer r.mu.Unlock()
+        r.data[p.ID] = p
+        return nil
+}</span>
+
+func (r *InMemoryPaymentRepository) FindByID(id string) (*domain.Payment, error) <span class="cov0" title="0">{
+        r.mu.RLock()
+        defer r.mu.RUnlock()
+        p, ok := r.data[id]
+        if !ok </span><span class="cov0" title="0">{
+                return nil, errors.New("payment not found")
+        }</span>
+        <span class="cov0" title="0">return p, nil</span>
+}
+
+func (r *InMemoryPaymentRepository) FindAll() ([]*domain.Payment, error) <span class="cov0" title="0">{
+        r.mu.RLock()
+        defer r.mu.RUnlock()
+        ps := make([]*domain.Payment, 0, len(r.data))
+        for _, v := range r.data </span><span class="cov0" title="0">{
+                ps = append(ps, v)
+        }</span>
+        <span class="cov0" title="0">return ps, nil</span>
+}
+
+func (r *InMemoryPaymentRepository) Remove(id string) error <span class="cov0" title="0">{
+        r.mu.Lock()
+        defer r.mu.Unlock()
+        delete(r.data, id)
+        return nil
+}</span>
+
+func (r *InMemoryPaymentRepository) Update(p *domain.Payment) error <span class="cov0" title="0">{
+        r.mu.Lock()
+        defer r.mu.Unlock()
+        r.data[p.ID] = p
+        return nil
+}</span>
+
+func (r *InMemoryPaymentRepository) FindByStripeID(stripeID string) (*domain.Payment, error) <span class="cov0" title="0">{
+        r.mu.RLock()
+        defer r.mu.RUnlock()
+        p, ok := r.stripeMap[stripeID]
+        if !ok </span><span class="cov0" title="0">{
+                return nil, errors.New("stripe not found")
+        }</span>
+        <span class="cov0" title="0">return p, nil</span>
+}
+
+func (r *InMemoryPaymentRepository) FindByIdempotencyKey(idempotencyKey string) (*domain.Payment, error) <span class="cov0" title="0">{
+        r.mu.RLock()
+        defer r.mu.RUnlock()
+        for _, p := range r.data </span><span class="cov0" title="0">{
+                if p.GetIdempotencyKey() == idempotencyKey </span><span class="cov0" title="0">{
+                        return p, nil
+                }</span>
+        }
+
+        <span class="cov0" title="0">return nil, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file9" style="display: none">package infra
+
+import (
+        "context"
+        "errors"
+        "fmt"
+        "time"
+
+        "github.com/sony/gobreaker"
+        "github.com/stripe/stripe-go"
+        "github.com/stripe/stripe-go/paymentintent"
+        "github.com/stripe/stripe-go/refund"
+        "github.com/williamkoller/payment-system/config"
+        "github.com/williamkoller/payment-system/pkg/logger"
+)
+
+type StripeClient interface {
+        CreatePaymentIntent(ctx context.Context, amount int64, currency, email string, paymentMethod string) (*stripe.PaymentIntent, error)
+        Capture(ctx context.Context, piID string) error
+        Cancel(ctx context.Context, piID string) error
+        Refund(ctx context.Context, stripeID string, amount int64) error
+}
+
+var configuration, _ = config.LoadConfiguration()
+
+type stripeClient struct {
+        cb *gobreaker.CircuitBreaker
+}
+
+func newDefaultCircuitBreaker() *gobreaker.CircuitBreaker <span class="cov0" title="0">{
+        settings := gobreaker.Settings{
+                Name:        "Stripe",
+                MaxRequests: 2,
+                Interval:    60 * time.Second,
+                Timeout:     10 * time.Second,
+                ReadyToTrip: func(counts gobreaker.Counts) bool </span><span class="cov0" title="0">{
+                        return counts.ConsecutiveFailures &gt; 3
+                }</span>,
+                OnStateChange: func(name string, from, to gobreaker.State) <span class="cov0" title="0">{
+                        logger.Default().Infow("circuit breaker state changed", "name", name, "from", from.String(), "to", to.String())
+                }</span>,
+        }
+        <span class="cov0" title="0">return gobreaker.NewCircuitBreaker(settings)</span>
+}
+
+func NewStripeClient() StripeClient <span class="cov0" title="0">{
+        stripe.Key = configuration.Stripe.StripeApiKey
+        return &amp;stripeClient{
+                cb: newDefaultCircuitBreaker(),
+        }
+}</span>
+
+func (c *stripeClient) CreatePaymentIntent(ctx context.Context, amount int64, currency, email string, paymentMethod string) (*stripe.PaymentIntent, error) <span class="cov0" title="0">{
+        result, err := c.cb.Execute(func() (interface{}, error) </span><span class="cov0" title="0">{
+                select </span>{
+                case &lt;-ctx.Done():<span class="cov0" title="0">
+                        return nil, ctx.Err()</span>
+                default:<span class="cov0" title="0"></span>
+                }
+                <span class="cov0" title="0">var lastErr error
+                backoff := 100 * time.Millisecond
+                maxRetries := 3
+
+                for i := 0; i &lt; maxRetries; i++ </span><span class="cov0" title="0">{
+                        params := &amp;stripe.PaymentIntentParams{
+                                Amount:             stripe.Int64(amount),
+                                Currency:           stripe.String(currency),
+                                ReceiptEmail:       stripe.String(email),
+                                CaptureMethod:      stripe.String(string(stripe.PaymentIntentCaptureMethodManual)),
+                                Confirm:            stripe.Bool(true),
+                                PaymentMethod:      stripe.String(configuration.Stripe.StripeMethod),
+                                PaymentMethodTypes: []*string{stripe.String(paymentMethod)},
+                        }
+
+                        pi, err := paymentintent.New(params)
+                        if err == nil </span><span class="cov0" title="0">{
+                                return pi, nil
+                        }</span>
+
+                        <span class="cov0" title="0">var stripeErr *stripe.Error
+                        if errors.As(err, &amp;stripeErr) </span><span class="cov0" title="0">{
+                                if stripeErr.HTTPStatusCode == 401 </span><span class="cov0" title="0">{
+                                        return nil, fmt.Errorf("stripe unauthorized: %s", stripeErr.Msg)
+                                }</span>
+                                <span class="cov0" title="0">if stripeErr.HTTPStatusCode &gt;= 400 &amp;&amp; stripeErr.HTTPStatusCode &lt; 500 </span><span class="cov0" title="0">{
+                                        return nil, fmt.Errorf("stripe request error: %s", stripeErr.Msg)
+                                }</span>
+                        }
+
+                        <span class="cov0" title="0">lastErr = err
+                        time.Sleep(backoff)
+                        backoff *= 2</span>
+                }
+
+                <span class="cov0" title="0">return nil, lastErr</span>
+        })
+
+        <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">pi, ok := result.(*stripe.PaymentIntent)
+        if !ok </span><span class="cov0" title="0">{
+                return nil, errors.New("unexpected type from circuit breaker result")
+        }</span>
+
+        <span class="cov0" title="0">return pi, nil</span>
+}
+
+func (c *stripeClient) Capture(ctx context.Context, piID string) error <span class="cov0" title="0">{
+        result, err := c.cb.Execute(func() (interface{}, error) </span><span class="cov0" title="0">{
+                select </span>{
+                case &lt;-ctx.Done():<span class="cov0" title="0">
+                        return nil, ctx.Err()</span>
+                default:<span class="cov0" title="0"></span>
+                }
+
+                <span class="cov0" title="0">return paymentintent.Capture(piID, &amp;stripe.PaymentIntentCaptureParams{})</span>
+        })
+
+        <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">if _, ok := result.(*stripe.PaymentIntent); !ok </span><span class="cov0" title="0">{
+                return errors.New("unexpected result type from Stripe capture")
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (c *stripeClient) Cancel(ctx context.Context, piID string) error <span class="cov0" title="0">{
+        result, err := c.cb.Execute(func() (interface{}, error) </span><span class="cov0" title="0">{
+                select </span>{
+                case &lt;-ctx.Done():<span class="cov0" title="0">
+                        return nil, ctx.Err()</span>
+                default:<span class="cov0" title="0"></span>
+                }
+
+                <span class="cov0" title="0">return paymentintent.Cancel(piID, &amp;stripe.PaymentIntentCancelParams{})</span>
+        })
+
+        <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">if _, ok := result.(*stripe.PaymentIntent); !ok </span><span class="cov0" title="0">{
+                return errors.New("unexpected result type from Stripe cancel")
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (c *stripeClient) Refund(ctx context.Context, stripeID string, amount int64) error <span class="cov0" title="0">{
+        logger.Info("stripe payment intent ID", "StripeID", stripeID)
+
+        _, err := c.cb.Execute(func() (interface{}, error) </span><span class="cov0" title="0">{
+                select </span>{
+                case &lt;-ctx.Done():<span class="cov0" title="0">
+                        return nil, ctx.Err()</span>
+                default:<span class="cov0" title="0"></span>
+                }
+
+                <span class="cov0" title="0">params := &amp;stripe.RefundParams{
+                        Amount:        stripe.Int64(amount),
+                        PaymentIntent: stripe.String(stripeID),
+                }
+
+                return refund.New(params)</span>
+        })
+
+        <span class="cov0" title="0">return err</span>
+}
+</pre>
+		
+		<pre class="file" id="file10" style="display: none">package interfaces
+
+import (
+        "net/http"
+        "strings"
+
+        "github.com/gin-gonic/gin"
+        "github.com/williamkoller/payment-system/internal/middleware"
+        "github.com/williamkoller/payment-system/internal/payment/application"
+        "github.com/williamkoller/payment-system/internal/payment/dtos"
+)
+
+type PaymentHandler struct {
+        Usecase *application.PaymentUseCase
+}
+
+func NewPaymentHandler(usecase *application.PaymentUseCase) *PaymentHandler <span class="cov0" title="0">{
+        return &amp;PaymentHandler{Usecase: usecase}
+}</span>
+
+func (h *PaymentHandler) CreatePayment(c *gin.Context) <span class="cov0" title="0">{
+        log := middleware.FromContext(c)
+        var dto dtos.AddPaymentDto
+
+        if err := c.ShouldBindJSON(&amp;dto); err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+                return
+        }</span>
+
+        <span class="cov0" title="0">payment, err := h.Usecase.CreatePayment(application.PaymentInput{
+                Amount:        dto.Amount,
+                Currency:      dto.Currency,
+                Email:         dto.Email,
+                PaymentMethod: dto.PaymentMethod,
+        })
+
+        if err != nil </span><span class="cov0" title="0">{
+                status := ""
+                if payment != nil </span><span class="cov0" title="0">{
+                        status = string(payment.Status)
+                }</span>
+
+                <span class="cov0" title="0">var httpCode int
+                var message string
+
+                switch </span>{
+                case strings.Contains(err.Error(), "already processed"):<span class="cov0" title="0">
+                        httpCode = http.StatusOK
+                        message = "Payment already processed — returning existing transaction"</span>
+                case strings.Contains(err.Error(), "already exists"):<span class="cov0" title="0">
+                        httpCode = http.StatusConflict
+                        message = "Payment with this idempotency key already exists"</span>
+                case strings.Contains(err.Error(), "stripe payment failed"):<span class="cov0" title="0">
+                        httpCode = http.StatusBadGateway
+                        message = "Payment creation failed due to Stripe error"</span>
+                default:<span class="cov0" title="0">
+                        httpCode = http.StatusInternalServerError
+                        message = "Unexpected error while creating payment"</span>
+                }
+
+                <span class="cov0" title="0">log.Errorw("Error creating payment", "err", err.Error(), "status", status)
+                c.JSON(httpCode, gin.H{
+                        "error":   err.Error(),
+                        "status":  status,
+                        "message": message,
+                })
+                return</span>
+        }
+
+        <span class="cov0" title="0">log.Infow("Created payment", "id", payment.ID, "status", payment.Status)
+        c.JSON(http.StatusCreated, ToPaymentResponse(payment))</span>
+}
+
+func (h *PaymentHandler) GetPaymentByID(c *gin.Context) <span class="cov0" title="0">{
+        var uri dtos.IdentifyPaymentDto
+
+        if err := c.ShouldBindUri(&amp;uri); err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payment ID"})
+                return
+        }</span>
+
+        <span class="cov0" title="0">paymentFound, err := h.Usecase.FindPaymentByID(uri)
+        if err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+                return
+        }</span>
+
+        <span class="cov0" title="0">if paymentFound == nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusNotFound, gin.H{"error": "payment not found"})
+                return
+        }</span>
+
+        <span class="cov0" title="0">log := middleware.FromContext(c)
+        log.Infow("Found Payment", "id", paymentFound.ID)
+
+        c.JSON(http.StatusOK, ToPaymentResponse(paymentFound))</span>
+}
+
+func (h *PaymentHandler) CapturePayment(c *gin.Context) <span class="cov0" title="0">{
+        var uri dtos.IdentifyPaymentDto
+        if err := c.ShouldBindUri(&amp;uri); err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payment ID"})
+        }</span>
+        <span class="cov0" title="0">log := middleware.FromContext(c)
+        ctx := c.Request.Context()
+        payment, err := h.Usecase.Capture(ctx, uri)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Errorw("Capture failed", "err", err.Error())
+                c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+                return
+        }</span>
+
+        <span class="cov0" title="0">c.JSON(http.StatusOK, ToPaymentResponse(payment))</span>
+}
+
+func (h *PaymentHandler) CancelPayment(c *gin.Context) <span class="cov0" title="0">{
+        var uri dtos.IdentifyPaymentDto
+        if err := c.ShouldBindUri(&amp;uri); err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payment ID"})
+        }</span>
+        <span class="cov0" title="0">log := middleware.FromContext(c)
+        ctx := c.Request.Context()
+        payment, err := h.Usecase.Cancel(ctx, uri)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Errorw("Cancel failed", "err", err.Error())
+                c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+                return
+        }</span>
+
+        <span class="cov0" title="0">c.JSON(http.StatusOK, ToPaymentResponse(payment))</span>
+}
+
+func (h *PaymentHandler) RefundPayment(c *gin.Context) <span class="cov0" title="0">{
+        log := middleware.FromContext(c)
+        ctx := c.Request.Context()
+
+        var uri dtos.IdentifyPaymentDto
+        if err := c.ShouldBindUri(&amp;uri); err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payment id"})
+                return
+        }</span>
+
+        <span class="cov0" title="0">var pr dtos.PaymentRefundDto
+        if err := c.ShouldBindJSON(&amp;pr); err != nil </span><span class="cov0" title="0">{
+                c.JSON(http.StatusBadRequest, gin.H{"error": "invalid amount"})
+                return
+        }</span>
+
+        <span class="cov0" title="0">log.Infow("Refund Payment", "payment_id", uri.PaymentID, "amount", pr.Amount)
+
+        payment, err := h.Usecase.Refund(ctx, uri, pr)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Errorw("Refund failed", "err", err.Error())
+                c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+                return
+        }</span>
+
+        <span class="cov0" title="0">c.JSON(http.StatusOK, ToPaymentResponse(payment))</span>
+}
+</pre>
+		
+		<pre class="file" id="file11" style="display: none">package interfaces
+
+import (
+        "time"
+
+        "github.com/williamkoller/payment-system/internal/payment/domain"
+)
+
+type PaymentResponse struct {
+        ID             string               `json:"id"`
+        Amount         int64                `json:"amount"`
+        Currency       string               `json:"currency"`
+        Status         domain.PaymentStatus `json:"status"`
+        Email          string               `json:"email"`
+        StripeID       string               `json:"stripe_id"`
+        PaymentMethod  string               `json:"payment_method"`
+        IdempotencyKey string               `json:"idempotency_key"`
+        CreatedAt      time.Time            `json:"created_at"`
+        UpdatedAt      time.Time            `json:"updated_at"`
+}
+
+func ToPaymentResponse(p *domain.Payment) PaymentResponse <span class="cov0" title="0">{
+        return PaymentResponse{
+                ID:             p.ID,
+                Amount:         p.Amount,
+                Currency:       p.Currency,
+                Status:         p.Status,
+                Email:          p.Email,
+                StripeID:       p.StripeID,
+                PaymentMethod:  p.PaymentMethod,
+                IdempotencyKey: p.IdempotencyKey,
+                CreatedAt:      p.CreatedAt,
+                UpdatedAt:      p.UpdatedAt,
+        }
+}</span>
+</pre>
+		
+		<pre class="file" id="file12" style="display: none">package repository
+
+import (
+        "github.com/williamkoller/payment-system/internal/payment/domain"
+        "gorm.io/gorm"
+)
+
+type PaymentRepository interface {
+        Create(p domain.Payment) (*domain.Payment, error)
+        FindByID(id string) (*domain.Payment, error)
+        FindAll() ([]*domain.Payment, error)
+        Remove(id string) error
+        Update(p *domain.Payment) error
+}
+
+type PaymentRepositoryImpl struct {
+        db *gorm.DB
+}
+
+func NewPaymentRepository(db *gorm.DB) *PaymentRepositoryImpl <span class="cov8" title="1">{
+        return &amp;PaymentRepositoryImpl{db: db}
+}</span>
+
+func (r *PaymentRepositoryImpl) Create(p domain.Payment) (*domain.Payment, error) <span class="cov8" title="1">{
+        if err := r.db.Create(&amp;p).Error; err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">return &amp;p, nil</span>
+}
+
+func (r *PaymentRepositoryImpl) FindByID(id string) (*domain.Payment, error) <span class="cov8" title="1">{
+        var payment domain.Payment
+        if err := r.db.First(&amp;payment, "id = ?", id).Error; err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">return &amp;payment, nil</span>
+}
+
+func (r *PaymentRepositoryImpl) FindAll() ([]*domain.Payment, error) <span class="cov8" title="1">{
+        var payments []*domain.Payment
+        if err := r.db.Find(&amp;payments).Error; err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">return payments, nil</span>
+}
+
+func (r *PaymentRepositoryImpl) Remove(id string) error <span class="cov8" title="1">{
+        return r.db.Delete(&amp;domain.Payment{}, "id = ?", id).Error
+}</span>
+
+func (r *PaymentRepositoryImpl) Update(p *domain.Payment) error <span class="cov8" title="1">{
+        return r.db.Model(&amp;domain.Payment{}).
+                Select("StripeID", "Amount", "Currency", "Status", "Email", "PaymentMethod", "IdempotencyKey").
+                Where("id = ?", p.ID).
+                Updates(p).Error
+}</span>
+</pre>
+		
+		<pre class="file" id="file13" style="display: none">package router
+
+import (
+        "github.com/gin-gonic/gin"
+        "github.com/williamkoller/payment-system/internal/payment/application"
+        "github.com/williamkoller/payment-system/internal/payment/infra"
+        "github.com/williamkoller/payment-system/internal/payment/interfaces"
+)
+
+func SetupRouter(e *gin.Engine) <span class="cov0" title="0">{
+        repo := infra.NewInMemoryPaymentRepository()
+        stripeClient := infra.NewStripeClient()
+        usecase := application.NewPaymentUseCase(repo, stripeClient)
+        handler := interfaces.NewPaymentHandler(usecase)
+        payments := e.Group("/payments")
+        </span><span class="cov0" title="0">{
+                payments.POST("/", handler.CreatePayment)
+                payments.GET("/:payment_id", handler.GetPaymentByID)
+                payments.POST("/:payment_id/capture", handler.CapturePayment)
+                payments.POST("/:payment_id/cancel", handler.CancelPayment)
+                payments.POST("/:payment_id/refund", handler.RefundPayment)
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file14" style="display: none">package router
+
+import (
+        "github.com/gin-gonic/gin"
+        "github.com/williamkoller/payment-system/config"
+        "github.com/williamkoller/payment-system/internal/payment/infra"
+        "github.com/williamkoller/payment-system/internal/webhook/stripe"
+)
+
+func SetupWebhookRouter(e *gin.Engine) <span class="cov0" title="0">{
+        cfg, err := config.LoadConfiguration()
+        if err != nil </span><span class="cov0" title="0">{
+                panic("cannot load configuration: " + err.Error())</span>
+        }
+
+        <span class="cov0" title="0">paymentRepo := infra.NewInMemoryPaymentRepository()
+        processor := stripe.NewStripeProcessor(paymentRepo)
+        handler := stripe.NewStripeWebhookHandler(cfg.Stripe.StripeWebhook, processor)
+
+        e.POST("/webhook/stripe", handler.Handle)</span>
+}
+</pre>
+		
+		<pre class="file" id="file15" style="display: none">package stripe
+
+import (
+        "encoding/json"
+        "io"
+        "net/http"
+
+        "github.com/gin-gonic/gin"
+        "github.com/stripe/stripe-go"
+        "github.com/stripe/stripe-go/webhook"
+        "github.com/williamkoller/payment-system/pkg/logger"
+)
+
+type StripeWebhookHandler struct {
+        secret    string
+        processor *StripeProcessor
+}
+
+func NewStripeWebhookHandler(secret string, processor *StripeProcessor) *StripeWebhookHandler <span class="cov0" title="0">{
+        return &amp;StripeWebhookHandler{secret: secret, processor: processor}
+}</span>
+
+func (h *StripeWebhookHandler) Handle(c *gin.Context) <span class="cov0" title="0">{
+        const MaxBodyBytes = int64(65536)
+        c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, MaxBodyBytes)
+
+        payload, err := io.ReadAll(c.Request.Body)
+        if err != nil </span><span class="cov0" title="0">{
+                logger.Default().Errorw("cannot read webhook body", "err", err)
+                c.Status(http.StatusServiceUnavailable)
+                return
+        }</span>
+
+        <span class="cov0" title="0">sigHeader := c.GetHeader("Stripe-Signature")
+        event, err := webhook.ConstructEvent(payload, sigHeader, h.secret)
+        if err != nil </span><span class="cov0" title="0">{
+                logger.Default().Errorw("invalid webhook signature", "err", err)
+                c.Status(http.StatusBadRequest)
+                return
+        }</span>
+
+        <span class="cov0" title="0">logger.Default().Infow("received stripe webhook event", "type", event.Type)
+
+        switch event.Type </span>{
+        case "payment_intent.succeeded":<span class="cov0" title="0">
+                var pi stripe.PaymentIntent
+                if err := json.Unmarshal(event.Data.Raw, &amp;pi); err != nil </span><span class="cov0" title="0">{
+                        logger.Default().Errorw("failed unmarshal payment_intent.succeeded", "err", err)
+                }</span> else<span class="cov0" title="0"> {
+                        if err := h.processor.HandleSucceeded(&amp;pi); err != nil </span><span class="cov0" title="0">{
+                                logger.Default().Errorw("processor handle succeeded error", "err", err)
+                        }</span>
+                }
+        case "payment_intent.payment_failed":<span class="cov0" title="0">
+                var pi stripe.PaymentIntent
+                if err := json.Unmarshal(event.Data.Raw, &amp;pi); err != nil </span><span class="cov0" title="0">{
+                        logger.Default().Errorw("failed unmarshal payment_intent.payment_failed", "err", err)
+                }</span> else<span class="cov0" title="0"> {
+                        if err := h.processor.HandleFailed(&amp;pi); err != nil </span><span class="cov0" title="0">{
+                                logger.Default().Errorw("processor handle failed error", "err", err)
+                        }</span>
+                }
+        default:<span class="cov0" title="0">
+                logger.Default().Infow("unhandled stripe event", "type", event.Type)</span>
+        }
+
+        <span class="cov0" title="0">c.Status(http.StatusOK)</span>
+}
+</pre>
+		
+		<pre class="file" id="file16" style="display: none">package stripe
+
+import (
+        "errors"
+
+        "github.com/stripe/stripe-go"
+        "github.com/williamkoller/payment-system/internal/payment/application"
+)
+
+type StripeProcessor struct {
+        paymentRepo application.PaymentRepository
+}
+
+func NewStripeProcessor(paymentRepo application.PaymentRepository) *StripeProcessor <span class="cov0" title="0">{
+        return &amp;StripeProcessor{paymentRepo}
+}</span>
+
+func (p *StripeProcessor) HandleSucceeded(pi *stripe.PaymentIntent) error <span class="cov0" title="0">{
+        if pi == nil </span><span class="cov0" title="0">{
+                return errors.New("nil payment")
+        }</span>
+
+        <span class="cov0" title="0">payment, err := p.paymentRepo.FindByStripeID(pi.ID)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">payment.Complete()
+        return p.paymentRepo.Update(payment)</span>
+}
+
+func (p *StripeProcessor) HandleFailed(pi *stripe.PaymentIntent) error <span class="cov0" title="0">{
+        if pi == nil </span><span class="cov0" title="0">{
+                return errors.New("nil PaymentIntent")
+        }</span>
+        <span class="cov0" title="0">payment, err := p.paymentRepo.FindByStripeID(pi.ID)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">payment.Fail()
+        return p.paymentRepo.Update(payment)</span>
+}
+</pre>
+		
+		<pre class="file" id="file17" style="display: none">package logger
+
+import (
+        "log"
+        _ "os"
+        "sync"
+
+        "go.uber.org/zap"
+        _ "go.uber.org/zap/zapcore"
+)
+
+var (
+        logger  *zap.SugaredLogger
+        once    sync.Once
+        initErr error
+)
+
+func InitLogger(mode string) error <span class="cov0" title="0">{
+        once.Do(func() </span><span class="cov0" title="0">{
+                var zapLogger *zap.Logger
+
+                switch mode </span>{
+                case "dev":<span class="cov0" title="0">
+                        zapLogger, initErr = zap.NewDevelopment()</span>
+                default:<span class="cov0" title="0">
+                        cfg := zap.NewProductionConfig()
+                        cfg.OutputPaths = []string{"stdout"} // Logs go to stdout
+                        cfg.ErrorOutputPaths = []string{"stderr"}
+                        zapLogger, initErr = cfg.Build()</span>
+                }
+
+                <span class="cov0" title="0">if initErr != nil </span><span class="cov0" title="0">{
+                        log.Printf("Failed to initialize zap logger: %v", initErr)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">logger = zapLogger.Sugar()</span>
+        })
+
+        <span class="cov0" title="0">return initErr</span>
+}
+
+func WithFields(fields map[string]interface{}) *zap.SugaredLogger <span class="cov0" title="0">{
+        if logger == nil </span><span class="cov0" title="0">{
+                log.Println("Logger not initialized")
+                return nil
+        }</span>
+        <span class="cov0" title="0">return logger.With(zapFields(fields)...)</span>
+}
+
+func zapFields(fields map[string]interface{}) []interface{} <span class="cov0" title="0">{
+        z := make([]interface{}, 0, len(fields)*2)
+        for k, v := range fields </span><span class="cov0" title="0">{
+                z = append(z, k, v)
+        }</span>
+        <span class="cov0" title="0">return z</span>
+}
+
+func Info(msg string, fields ...interface{}) <span class="cov0" title="0">{
+        if logger != nil </span><span class="cov0" title="0">{
+                logger.Infow(msg, fields...)
+        }</span>
+}
+
+func Error(msg string, fields ...interface{}) <span class="cov0" title="0">{
+        if logger != nil </span><span class="cov0" title="0">{
+                logger.Errorw(msg, fields...)
+        }</span>
+}
+
+func Fatal(msg string, fields ...interface{}) <span class="cov0" title="0">{
+        if logger != nil </span><span class="cov0" title="0">{
+                logger.Fatalw(msg, fields...)
+        }</span>
+}
+
+func Sync() <span class="cov0" title="0">{
+        if logger != nil </span><span class="cov0" title="0">{
+                _ = logger.Sync()
+        }</span>
+}
+
+func Default() *zap.SugaredLogger <span class="cov0" title="0">{
+        if logger == nil </span><span class="cov0" title="0">{
+                log.Println("Logger not initialized")
+                return nil
+        }</span>
+        <span class="cov0" title="0">return logger</span>
+}
+</pre>
+		
+		<pre class="file" id="file18" style="display: none">package ulid
+
+import (
+        "math/rand"
+        "time"
+
+        "github.com/oklog/ulid/v2"
+)
+
+func NewULID() string <span class="cov0" title="0">{
+        t := time.Now()
+        entropy := ulid.Monotonic(rand.New(rand.NewSource(t.UnixNano())), 0)
+        return ulid.MustNew(ulid.Timestamp(t), entropy).String()
+}</span>
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
