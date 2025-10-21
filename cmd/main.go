@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"github.com/williamkoller/payment-system/config"
 	healthRouter "github.com/williamkoller/payment-system/internal/healthz/router"
 	"github.com/williamkoller/payment-system/internal/middleware"
@@ -20,6 +21,8 @@ import (
 )
 
 func main() {
+	_ = godotenv.Load()
+	
 	r := gin.Default()
 
 	err := logger.InitLogger("dev")
@@ -33,6 +36,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	database := config.NewDatabaseConnection()
+	config.RunMigrations(database, "")
 
 	middleware.Middlewares(r)
 	healthRouter.SetupRouter(r)

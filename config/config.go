@@ -2,7 +2,9 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -20,7 +22,7 @@ type StripeConfiguration struct {
 
 type DatabaseConfiguration struct {
 	Host     string
-	Port     string
+	Port     int
 	Username string
 	Password string
 	Database string
@@ -74,4 +76,20 @@ func loadStripeConfiguration() (*StripeConfiguration, error) {
 
 	return stripe, nil
 
+}
+
+func LoadDatabaseConfiguration() (*DatabaseConfiguration, error) {
+	port, err := strconv.Atoi(os.Getenv("DB_PORT"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid DB_PORT: %v", err)
+	}
+	db := &DatabaseConfiguration{
+		Host:     os.Getenv("DB_HOST"),
+		Port:     port,
+		Username: os.Getenv("DB_USERNAME"),
+		Password: os.Getenv("DB_PASSWORD"),
+		Database: os.Getenv("DB_DATABASE"),
+	}
+
+	return db, nil
 }
