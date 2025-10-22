@@ -32,7 +32,7 @@ func TestPaymentRepository_Create_Success(t *testing.T) {
 	gormDB, mock := setupMockDB(t)
 	repo := repository.NewPaymentRepository(gormDB)
 
-	p := domain.Payment{
+	p := &domain.Payment{
 		ID:             "id‑123",
 		StripeID:       "stripe_1",
 		Amount:         1000,
@@ -54,7 +54,7 @@ func TestPaymentRepository_Create_Success(t *testing.T) {
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 
-	created, err := repo.Create(p)
+	created, err := repo.Save(p)
 	assert.NoError(t, err)
 	assert.NotNil(t, created)
 	assert.Equal(t, p.ID, created.ID)
@@ -183,7 +183,7 @@ func TestPaymentRepository_Create_Error(t *testing.T) {
 	gormDB, mock := setupMockDB(t)
 	repo := repository.NewPaymentRepository(gormDB)
 
-	p := domain.Payment{
+	p := &domain.Payment{
 		ID: "id‑123",
 	}
 
@@ -193,7 +193,7 @@ func TestPaymentRepository_Create_Error(t *testing.T) {
 		WillReturnError(errors.New("db insert error"))
 	mock.ExpectRollback()
 
-	created, err := repo.Create(p)
+	created, err := repo.Save(p)
 	assert.Error(t, err)
 	assert.Nil(t, created)
 }

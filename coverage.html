@@ -79,7 +79,7 @@
 				
 				<option value="file11">github.com/williamkoller/payment-system/internal/payment/interfaces/mapper.go (0.0%)</option>
 				
-				<option value="file12">github.com/williamkoller/payment-system/internal/payment/repository/payment_repository.go (100.0%)</option>
+				<option value="file12">github.com/williamkoller/payment-system/internal/payment/repository/payment_repository.go (63.6%)</option>
 				
 				<option value="file13">github.com/williamkoller/payment-system/internal/payment/router/payment.go (0.0%)</option>
 				
@@ -129,7 +129,7 @@ import (
 
 func main() <span class="cov0" title="0">{
         _ = godotenv.Load()
-        
+
         r := gin.Default()
 
         err := logger.InitLogger("dev")
@@ -149,9 +149,9 @@ func main() <span class="cov0" title="0">{
 
         middleware.Middlewares(r)
         healthRouter.SetupRouter(r)
-        paymentRouter.SetupRouter(r)
-        webhookRouter.SetupWebhookRouter(r)
-
+        paymentRouter.SetupRouter(r, database)
+        webhookRouter.SetupWebhookRouter(r, database)
+        
         srv := &amp;http.Server{
                 Addr:              ":" + configuration.App.Port,
                 Handler:           r,
@@ -184,8 +184,6 @@ import (
         "fmt"
         "os"
         "strconv"
-
-        "github.com/joho/godotenv"
 )
 
 type AppConfiguration struct {
@@ -212,35 +210,6 @@ type ResponseConfiguration struct {
         Stripe   StripeConfiguration
         Database DatabaseConfiguration
 }
-
-func LoadConfiguration() (*ResponseConfiguration, error) <span class="cov0" title="0">{
-        _ = godotenv.Load()
-
-        app, err := loadAppConfiguration()
-        if err != nil </span><span class="cov0" title="0">{
-                return nil, errors.New("Error loading app configuration: " + err.Error())
-        }</span>
-
-        <span class="cov0" title="0">stripe, err := loadStripeConfiguration()
-
-        if err != nil </span><span class="cov0" title="0">{
-                return nil, errors.New("Error loading Stripe configuration: " + err.Error())
-        }</span>
-
-        <span class="cov0" title="0">return &amp;ResponseConfiguration{
-                App:    *app,
-                Stripe: *stripe,
-        }, nil</span>
-}
-
-func loadAppConfiguration() (*AppConfiguration, error) <span class="cov0" title="0">{
-        app := &amp;AppConfiguration{
-                Port:    os.Getenv("PORT"),
-                AppName: os.Getenv("APP_NAME"),
-        }
-
-        return app, nil
-}</span>
 
 func loadStripeConfiguration() (*StripeConfiguration, error) <span class="cov0" title="0">{
         stripe := &amp;StripeConfiguration{
@@ -272,6 +241,43 @@ func LoadDatabaseConfiguration() (*DatabaseConfiguration, error) <span class="co
 
         return db, nil</span>
 }
+
+func LoadConfiguration() (*ResponseConfiguration, error) <span class="cov0" title="0">{
+        app, err := loadAppConfiguration()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("Error loading app configuration: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">stripe, err := loadStripeConfiguration()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("Error loading Stripe configuration: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">db, err := LoadDatabaseConfiguration()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("Error loading database configuration: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">return &amp;ResponseConfiguration{
+                App:      *app,
+                Stripe:   *stripe,
+                Database: *db,
+        }, nil</span>
+}
+
+func loadAppConfiguration() (*AppConfiguration, error) <span class="cov0" title="0">{
+        app := &amp;AppConfiguration{
+                Port:    os.Getenv("PORT"),
+                AppName: os.Getenv("APP_NAME"),
+        }
+        if app.Port == "" </span><span class="cov0" title="0">{
+                return nil, errors.New("PORT is required")
+        }</span>
+        <span class="cov0" title="0">if app.AppName == "" </span><span class="cov0" title="0">{
+                return nil, errors.New("APP_NAME is required")
+        }</span>
+        <span class="cov0" title="0">return app, nil</span>
+}
 </pre>
 		
 		<pre class="file" id="file2" style="display: none">package config
@@ -286,6 +292,7 @@ import (
         "github.com/golang-migrate/migrate/v4"
         "gorm.io/driver/postgres"
         "gorm.io/gorm"
+        gormLogger "gorm.io/gorm/logger"
 
         _ "github.com/golang-migrate/migrate/v4/source/file"
         _ "github.com/lib/pq"
@@ -304,12 +311,17 @@ func NewDatabaseConnection() *gorm.DB <span class="cov0" title="0">{
                 config.Host, config.Port, config.Username, config.Password, config.Database,
         )
 
-        db, err := gorm.Open(postgres.Open(sqlInfo), &amp;gorm.Config{TranslateError: true})
-        if err != nil </span><span class="cov0" title="0">{
-                log.Fatalf("open database connection failed: %v", err)
-        }</span>
+        dbLogger := gormLogger.New(
+                log.New(os.Stdout, "", log.LstdFlags),
+                gormLogger.Config{IgnoreRecordNotFoundError: true},
+        )
 
-        <span class="cov0" title="0">log.Println("✅ Connected to DB")
+        db, err := gorm.Open(postgres.Open(sqlInfo), &amp;gorm.Config{
+                TranslateError: true,
+                Logger:         dbLogger,
+        })
+
+        log.Println("✅ Connected to DB")
         return db</span>
 }
 
@@ -324,14 +336,13 @@ func RunMigrations(gormDB *gorm.DB, migrationsPath string) <span class="cov0" ti
                 log.Fatal("migration WithInstance failed: ", err)
         }</span>
 
-        <span class="cov0" title="0">wd, err := os.Getwd()
-        if err != nil </span><span class="cov0" title="0">{
-                log.Fatal("could not get working directory: ", err)
-        }</span>
-
         <span class="cov0" title="0">if migrationsPath == "" </span><span class="cov0" title="0">{
-                migrationsPath = "file://" + filepath.Join(wd, "db/migrations")
-        }</span>
+                wd, err := os.Getwd()
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Fatal("could not get working directory: ", err)
+                }</span>
+                <span class="cov0" title="0">migrationsPath = "file://" + filepath.Join(wd, "db/migrations")</span>
+        }
 
         <span class="cov0" title="0">m, err := migrate.NewWithDatabaseInstance(migrationsPath, "postgres", driver)
         if err != nil </span><span class="cov0" title="0">{
@@ -433,10 +444,11 @@ import (
         "github.com/williamkoller/payment-system/internal/payment/dtos"
         "github.com/williamkoller/payment-system/internal/payment/infra"
         "github.com/williamkoller/payment-system/pkg/ulid"
+        "gorm.io/gorm"
 )
 
 type PaymentRepository interface {
-        Save(payment *domain.Payment) error
+        Save(payment *domain.Payment) (*domain.Payment, error)
         FindByID(id string) (*domain.Payment, error)
         FindAll() ([]*domain.Payment, error)
         Remove(id string) error
@@ -466,7 +478,7 @@ func (u *PaymentUseCase) CreatePayment(input PaymentInput) (*domain.Payment, err
         idempotencyKeyReq := fmt.Sprintf("%s_%s_%s_%v", input.Email, input.PaymentMethod, input.Currency, input.Amount)
 
         existingPayment, err := u.Repository.FindByIdempotencyKey(idempotencyKeyReq)
-        if err != nil </span><span class="cov0" title="0">{
+        if err != nil &amp;&amp; !errors.Is(err, gorm.ErrRecordNotFound) </span><span class="cov0" title="0">{
                 return nil, err
         }</span>
 
@@ -489,7 +501,7 @@ func (u *PaymentUseCase) CreatePayment(input PaymentInput) (*domain.Payment, err
 
         <span class="cov0" title="0">payment.SetIdempotencyKey(idempotencyKeyReq)
 
-        if err := u.Repository.Save(payment); err != nil </span><span class="cov0" title="0">{
+        if _, err := u.Repository.Save(payment); err != nil </span><span class="cov0" title="0">{
                 return nil, err
         }</span>
 
@@ -1247,11 +1259,13 @@ import (
 )
 
 type PaymentRepository interface {
-        Create(p domain.Payment) (*domain.Payment, error)
+        Save(payment domain.Payment) (*domain.Payment, error)
         FindByID(id string) (*domain.Payment, error)
         FindAll() ([]*domain.Payment, error)
         Remove(id string) error
         Update(p *domain.Payment) error
+        FindByStripeID(stripeID string) (*domain.Payment, error)
+        FindByIdempotencyKey(idempotencyKey string) (*domain.Payment, error)
 }
 
 type PaymentRepositoryImpl struct {
@@ -1262,11 +1276,11 @@ func NewPaymentRepository(db *gorm.DB) *PaymentRepositoryImpl <span class="cov8"
         return &amp;PaymentRepositoryImpl{db: db}
 }</span>
 
-func (r *PaymentRepositoryImpl) Create(p domain.Payment) (*domain.Payment, error) <span class="cov8" title="1">{
-        if err := r.db.Create(&amp;p).Error; err != nil </span><span class="cov8" title="1">{
+func (r *PaymentRepositoryImpl) Save(payment *domain.Payment) (*domain.Payment, error) <span class="cov8" title="1">{
+        if err := r.db.Create(&amp;payment).Error; err != nil </span><span class="cov8" title="1">{
                 return nil, err
         }</span>
-        <span class="cov8" title="1">return &amp;p, nil</span>
+        <span class="cov8" title="1">return payment, nil</span>
 }
 
 func (r *PaymentRepositoryImpl) FindByID(id string) (*domain.Payment, error) <span class="cov8" title="1">{
@@ -1295,6 +1309,23 @@ func (r *PaymentRepositoryImpl) Update(p *domain.Payment) error <span class="cov
                 Where("id = ?", p.ID).
                 Updates(p).Error
 }</span>
+
+func (r *PaymentRepositoryImpl) FindByStripeID(stripeID string) (*domain.Payment, error) <span class="cov0" title="0">{
+        var payment domain.Payment
+        if err := r.db.First(&amp;payment, "stripe_id = ?", stripeID).Error; err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return &amp;payment, nil</span>
+}
+
+func (r *PaymentRepositoryImpl) FindByIdempotencyKey(idempotencyKey string) (*domain.Payment, error) <span class="cov0" title="0">{
+        var payment domain.Payment
+        if err := r.db.First(&amp;payment, "idempotency_key = ?", idempotencyKey).Error; err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">return &amp;payment, nil</span>
+}
 </pre>
 		
 		<pre class="file" id="file13" style="display: none">package router
@@ -1304,10 +1335,12 @@ import (
         "github.com/williamkoller/payment-system/internal/payment/application"
         "github.com/williamkoller/payment-system/internal/payment/infra"
         "github.com/williamkoller/payment-system/internal/payment/interfaces"
+        "github.com/williamkoller/payment-system/internal/payment/repository"
+        "gorm.io/gorm"
 )
 
-func SetupRouter(e *gin.Engine) <span class="cov0" title="0">{
-        repo := infra.NewInMemoryPaymentRepository()
+func SetupRouter(e *gin.Engine, db *gorm.DB) <span class="cov0" title="0">{
+        repo := repository.NewPaymentRepository(db)
         stripeClient := infra.NewStripeClient()
         usecase := application.NewPaymentUseCase(repo, stripeClient)
         handler := interfaces.NewPaymentHandler(usecase)
@@ -1327,18 +1360,19 @@ func SetupRouter(e *gin.Engine) <span class="cov0" title="0">{
 import (
         "github.com/gin-gonic/gin"
         "github.com/williamkoller/payment-system/config"
-        "github.com/williamkoller/payment-system/internal/payment/infra"
+        "github.com/williamkoller/payment-system/internal/payment/repository"
         "github.com/williamkoller/payment-system/internal/webhook/stripe"
+        "gorm.io/gorm"
 )
 
-func SetupWebhookRouter(e *gin.Engine) <span class="cov0" title="0">{
+func SetupWebhookRouter(e *gin.Engine, db *gorm.DB) <span class="cov0" title="0">{
         cfg, err := config.LoadConfiguration()
         if err != nil </span><span class="cov0" title="0">{
                 panic("cannot load configuration: " + err.Error())</span>
         }
 
-        <span class="cov0" title="0">paymentRepo := infra.NewInMemoryPaymentRepository()
-        processor := stripe.NewStripeProcessor(paymentRepo)
+        <span class="cov0" title="0">repo := repository.NewPaymentRepository(db)
+        processor := stripe.NewStripeProcessor(repo)
         handler := stripe.NewStripeWebhookHandler(cfg.Stripe.StripeWebhook, processor)
 
         e.POST("/webhook/stripe", handler.Handle)</span>
