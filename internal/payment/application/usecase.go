@@ -11,10 +11,11 @@ import (
 	"github.com/williamkoller/payment-system/internal/payment/dtos"
 	"github.com/williamkoller/payment-system/internal/payment/infra"
 	"github.com/williamkoller/payment-system/pkg/ulid"
+	"gorm.io/gorm"
 )
 
 type PaymentRepository interface {
-	Save(payment *domain.Payment) error
+	Save(payment *domain.Payment) (*domain.Payment, error)
 	FindByID(id string) (*domain.Payment, error)
 	FindAll() ([]*domain.Payment, error)
 	Remove(id string) error
@@ -44,7 +45,7 @@ func (u *PaymentUseCase) CreatePayment(input PaymentInput) (*domain.Payment, err
 	idempotencyKeyReq := fmt.Sprintf("%s_%s_%s_%v", input.Email, input.PaymentMethod, input.Currency, input.Amount)
 
 	existingPayment, err := u.Repository.FindByIdempotencyKey(idempotencyKeyReq)
-	if err != nil {
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
 
@@ -67,7 +68,7 @@ func (u *PaymentUseCase) CreatePayment(input PaymentInput) (*domain.Payment, err
 
 	payment.SetIdempotencyKey(idempotencyKeyReq)
 
-	if err := u.Repository.Save(payment); err != nil {
+	if _, err := u.Repository.Save(payment); err != nil {
 		return nil, err
 	}
 

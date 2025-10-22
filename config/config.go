@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-
-	"github.com/joho/godotenv"
 )
 
 type AppConfiguration struct {
@@ -32,35 +30,6 @@ type ResponseConfiguration struct {
 	App      AppConfiguration
 	Stripe   StripeConfiguration
 	Database DatabaseConfiguration
-}
-
-func LoadConfiguration() (*ResponseConfiguration, error) {
-	_ = godotenv.Load()
-
-	app, err := loadAppConfiguration()
-	if err != nil {
-		return nil, errors.New("Error loading app configuration: " + err.Error())
-	}
-
-	stripe, err := loadStripeConfiguration()
-
-	if err != nil {
-		return nil, errors.New("Error loading Stripe configuration: " + err.Error())
-	}
-
-	return &ResponseConfiguration{
-		App:    *app,
-		Stripe: *stripe,
-	}, nil
-}
-
-func loadAppConfiguration() (*AppConfiguration, error) {
-	app := &AppConfiguration{
-		Port:    os.Getenv("PORT"),
-		AppName: os.Getenv("APP_NAME"),
-	}
-
-	return app, nil
 }
 
 func loadStripeConfiguration() (*StripeConfiguration, error) {
@@ -92,4 +61,41 @@ func LoadDatabaseConfiguration() (*DatabaseConfiguration, error) {
 	}
 
 	return db, nil
+}
+
+func LoadConfiguration() (*ResponseConfiguration, error) {
+	app, err := loadAppConfiguration()
+	if err != nil {
+		return nil, fmt.Errorf("Error loading app configuration: %w", err)
+	}
+
+	stripe, err := loadStripeConfiguration()
+	if err != nil {
+		return nil, fmt.Errorf("Error loading Stripe configuration: %w", err)
+	}
+
+	db, err := LoadDatabaseConfiguration()
+	if err != nil {
+		return nil, fmt.Errorf("Error loading database configuration: %w", err)
+	}
+
+	return &ResponseConfiguration{
+		App:      *app,
+		Stripe:   *stripe,
+		Database: *db,
+	}, nil
+}
+
+func loadAppConfiguration() (*AppConfiguration, error) {
+	app := &AppConfiguration{
+		Port:    os.Getenv("PORT"),
+		AppName: os.Getenv("APP_NAME"),
+	}
+	if app.Port == "" {
+		return nil, errors.New("PORT is required")
+	}
+	if app.AppName == "" {
+		return nil, errors.New("APP_NAME is required")
+	}
+	return app, nil
 }

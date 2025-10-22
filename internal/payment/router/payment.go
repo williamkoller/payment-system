@@ -5,10 +5,12 @@ import (
 	"github.com/williamkoller/payment-system/internal/payment/application"
 	"github.com/williamkoller/payment-system/internal/payment/infra"
 	"github.com/williamkoller/payment-system/internal/payment/interfaces"
+	"github.com/williamkoller/payment-system/internal/payment/repository"
+	"gorm.io/gorm"
 )
 
-func SetupRouter(e *gin.Engine) {
-	repo := infra.NewInMemoryPaymentRepository()
+func SetupRouter(e *gin.Engine, db *gorm.DB) {
+	repo := repository.NewPaymentRepository(db)
 	stripeClient := infra.NewStripeClient()
 	usecase := application.NewPaymentUseCase(repo, stripeClient)
 	handler := interfaces.NewPaymentHandler(usecase)

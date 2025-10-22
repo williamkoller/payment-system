@@ -48,12 +48,11 @@ func RunMigrations(gormDB *gorm.DB, migrationsPath string) {
 		log.Fatal("migration WithInstance failed: ", err)
 	}
 
-	wd, err := os.Getwd()
-	if err != nil {
-		log.Fatal("could not get working directory: ", err)
-	}
-
 	if migrationsPath == "" {
+		wd, err := os.Getwd()
+		if err != nil {
+			log.Fatal("could not get working directory: ", err)
+		}
 		migrationsPath = "file://" + filepath.Join(wd, "db/migrations")
 	}
 

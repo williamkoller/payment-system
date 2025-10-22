@@ -9,12 +9,19 @@ services:
       - go-payment-system-db
     env_file:
       - .env
+    environment:
+      DB_HOST: go-payment-system-db
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_DATABASE: ${DB_DATABASE}
     ports:
       - ${PORT}:${PORT}
     networks:
       - go-payment-system-network
     volumes:
       - ./db/migrations:/app/db/migrations
+      - /app:/app
 
   go-payment-system-db:
     container_name: go-payment-system-db

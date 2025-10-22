@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -22,7 +23,7 @@ import (
 
 func main() {
 	_ = godotenv.Load()
-	
+
 	r := gin.Default()
 
 	err := logger.InitLogger("dev")
@@ -42,8 +43,14 @@ func main() {
 
 	middleware.Middlewares(r)
 	healthRouter.SetupRouter(r)
-	paymentRouter.SetupRouter(r)
-	webhookRouter.SetupWebhookRouter(r)
+	paymentRouter.SetupRouter(r, database)
+	webhookRouter.SetupWebhookRouter(r, database)
+
+	for _, route := range r.Routes() {
+		fmt.Printf("📎 [%s] %s\n", route.Method, route.Path)
+	}
+
+	logger.Info("🌐 Listening on port", "port", configuration.App.Port)
 
 	srv := &http.Server{
 		Addr:              ":" + configuration.App.Port,
