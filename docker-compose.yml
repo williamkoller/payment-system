@@ -21,7 +21,6 @@ services:
       - go-payment-system-network
     volumes:
       - ./db/migrations:/app/db/migrations
-      - /app:/app
 
   go-payment-system-db:
     container_name: go-payment-system-db
