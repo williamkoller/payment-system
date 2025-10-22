@@ -10,6 +10,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	gormLogger "gorm.io/gorm/logger"
 
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
@@ -28,10 +29,15 @@ func NewDatabaseConnection() *gorm.DB {
 		config.Host, config.Port, config.Username, config.Password, config.Database,
 	)
 
-	db, err := gorm.Open(postgres.Open(sqlInfo), &gorm.Config{TranslateError: true})
-	if err != nil {
-		log.Fatalf("open database connection failed: %v", err)
-	}
+	dbLogger := gormLogger.New(
+		log.New(os.Stdout, "", log.LstdFlags),
+		gormLogger.Config{IgnoreRecordNotFoundError: true},
+	)
+
+	db, err := gorm.Open(postgres.Open(sqlInfo), &gorm.Config{
+		TranslateError: true,
+		Logger:         dbLogger,
+	})
 
 	log.Println("✅ Connected to DB")
 	return db

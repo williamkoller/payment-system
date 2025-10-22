@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -45,13 +44,7 @@ func main() {
 	healthRouter.SetupRouter(r)
 	paymentRouter.SetupRouter(r, database)
 	webhookRouter.SetupWebhookRouter(r, database)
-
-	for _, route := range r.Routes() {
-		fmt.Printf("📎 [%s] %s\n", route.Method, route.Path)
-	}
-
-	logger.Info("🌐 Listening on port", "port", configuration.App.Port)
-
+	
 	srv := &http.Server{
 		Addr:              ":" + configuration.App.Port,
 		Handler:           r,
